@@ -138,3 +138,116 @@ Not every factor is equally important in every situation. The weights are adapte
 | **Normal** | Efficiency and mission progress receive more consideration |
 | **Obstacle Nearby** | Safety receives greater importance |
 | **High Wind** | Safe operation becomes more important than minimizing travel time |
+
+### 6 Adaptive Path Planning
+
+After the decision stage, the system checks whether the direct path to the next waypoint is safe.
+
+#### 6.1 Case 1 — Direct Path is Clear
+
+The UAV follows the direct path toward the waypoint without any replanning.
+
+#### 6.2 Case 2 — Direct Path is Blocked
+
+The planner generates alternative routes in the following directions:
+
+| Direction | Description |
+|-----------|-------------|
+| **East** | Alternative route to the east |
+| **West** | Alternative route to the west |
+| **North** | Alternative route to the north |
+| **South** | Alternative route to the south |
+
+Each candidate route is evaluated using its distance, obstacle clearance, and associated cost.
+
+#### 6.3 Path Cost Formula
+
+A simplified path-cost representation is:
+
+$$C_{path} = w_d D + w_s S + w_t T$$
+
+| Symbol | Description |
+|--------|-------------|
+| **D** | Path distance |
+| **S** | Safety / clearance cost |
+| **T** | Travel-time cost |
+| **w_d, w_s, w_t** | Corresponding importance weights |
+
+#### 6.4 Route Selection
+
+- Routes that do not satisfy the required safety clearance are considered **infeasible** and are **rejected**.
+- The UAV selects the **lowest-cost feasible route** among the remaining candidates.
+
+### 7.Obstacle Clearance and Safety
+
+The system does not consider the UAV as a point. A vehicle radius and safety buffer are included when determining whether a route is safe.
+
+The required clearance is represented as:
+
+$$d_{required} = r_{UAV} + b_{safety}$$
+
+| Symbol | Description |
+|--------|-------------|
+| **d_required** | Minimum required clearance distance |
+| **r_UAV** | UAV / vehicle radius |
+| **b_safety** | Additional safety buffer |
+
+A candidate path is rejected when it enters the unsafe region around an obstacle. This allows the simulation to demonstrate realistic obstacle avoidance rather than simply checking whether the UAV's center crosses the obstacle.
+
+### 8.Dynamic Context Update
+
+One of the main features of ACMFDS is that the environment can change during the mission, and the system continuously re-evaluates its decisions accordingly.
+
+#### Context Transition Example
+
+```mermaid
+flowchart LR
+    A([Normal]) --> B([Obstacle Nearby]) --> C([High Wind]) --> D([Normal])
+```
+
+#### What Gets Updated on Context Change?
+
+| Parameter | Description |
+|-----------|-------------|
+| **Flight Mode** | Switches between Normal, Safety, and Emergency modes |
+| **UAV Speed** | Adjusted based on current risk level |
+| **Decision Weights** | Re-prioritized according to the new context |
+| **Navigation Action** | Flight behavior is updated accordingly |
+| **Selected Path** | A new safe route is planned if required |
+
+> **Key Principle:** The UAV does not need to complete the entire mission using the original decision. It continuously re-evaluates its behavior as conditions change, ensuring safe and efficient mission completion at all times.
+
+### 9.Stateflow Implementation
+
+The Stateflow component represents the UAV's behavioral logic. The input conditions are supplied to the Stateflow model, where transitions determine the appropriate operating state.
+
+#### State Transition Flow
+
+```mermaid
+flowchart TD
+    A([Inputs\nBattery · Wind · Obstacle · Priority])
+    B([Context Conditions])
+    C{Stateflow}
+    D([Normal Flight])
+    E([High Wind Mode])
+    F([Obstacle Nearby Mode])
+    G([Speed / Mode / Action])
+
+    A --> B --> C
+    C --> D
+    C --> E
+    C --> F
+    D --> G
+    E --> G
+    F --> G
+```
+
+#### Operating States
+
+| State | Trigger Condition | UAV Behavior |
+|-------|------------------|--------------|
+| **Normal Flight** | Stable environment, clear path | Standard speed, efficiency-focused |
+| **High Wind Mode** | Wind speed exceeds threshold | Reduced speed, safety-prioritized |
+| **Obstacle Nearby** | Obstacle within safety distance | Replanning triggered, safety weight increased |
+
+> **Key Principle:** Each state transition is driven by the input conditions, ensuring the UAV always operates in the most appropriate mode for the current environment.
