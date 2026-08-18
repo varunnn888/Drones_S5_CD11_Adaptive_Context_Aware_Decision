@@ -251,3 +251,85 @@ flowchart TD
 | **Obstacle Nearby** | Obstacle within safety distance | Replanning triggered, safety weight increased |
 
 > **Key Principle:** Each state transition is driven by the input conditions, ensuring the UAV always operates in the most appropriate mode for the current environment.
+
+### 10 MATLAB and Simulink Integration
+
+The project uses MATLAB for the main UAV simulation and adaptive path-planning logic, while Simulink/Stateflow is used to represent and test the decision-making behavior.
+
+| Component | Role |
+|-----------|------|
+| **MATLAB** | Main UAV simulation and adaptive path-planning logic |
+| **Simulink** | System-level modeling and integration |
+| **Stateflow** | Behavioral decision-making representation and testing |
+
+The integration allows the project to demonstrate both:
+
+- **Behavioral decision making** through Stateflow.
+- **Full UAV mission simulation** through MATLAB.
+
+The simulation records information such as UAV position, battery level, wind conditions, obstacle conditions, context, selected path, and mission progress.
+
+---
+
+### 11 Mission Execution
+
+The UAV moves through a sequence of mission waypoints. At each stage, the following process is followed:
+
+````mermaid
+flowchart TD
+    A([1. Observe Environmental Conditions])
+    B([2. Determine Current Context])
+    C([3. Apply Decision Weights])
+    D([4. Select Speed and Flight Mode])
+    E{5. Check Direct Path}
+    F([6. Generate Detour if Necessary])
+    G([7. Move Toward Waypoint])
+    H([8. Update Environment])
+    I{Mission Complete?}
+    J([End Mission])
+
+    A --> B --> C --> D --> E
+    E -- Clear --> G
+    E -- Blocked --> F --> G
+    G --> H --> I
+    I -- No --> A
+    I -- Yes --> J
+````
+
+> **Key Principle:** This creates a continuous adaptive decision loop rather than a one-time decision.
+
+---
+
+### 12 Simulation and Testing
+
+The system is tested under different conditions by varying the following parameters:
+
+| Test Parameter | Description |
+|----------------|-------------|
+| **Battery Level** | Tests energy-aware decision making |
+| **Wind Speed** | Tests safety mode activation |
+| **Obstacle Distance / Count** | Tests path replanning and avoidance |
+| **Mission Conditions** | Tests mission priority handling |
+
+The resulting changes in UAV speed, operating mode, selected path, travel distance, and mission behavior are observed and compared. The obstacle experiments also demonstrate that increasing environmental obstacles causes the UAV to select alternative paths instead of simply continuing along the direct route.
+
+---
+
+### 13 Overall Methodology Summary
+
+The complete ACMFDS methodology can be summarized as a continuous adaptive loop:
+
+````mermaid
+flowchart LR
+    A([Sense]) --> B([Identify Context]) --> C([Assign Weights]) --> D([Make Decision]) --> E([Check Path]) --> F([Avoid Obstacles]) --> G([Fly]) --> H([Update Environment]) --> A
+````
+
+This enables the UAV to adapt its behavior according to changing environmental and mission conditions while balancing:
+
+| Factor | Role |
+|--------|------|
+| **Safety** | Avoid obstacles and unsafe conditions |
+| **Energy** | Conserve battery for mission completion |
+| **Time** | Minimize unnecessary delays |
+| **Tracking** | Stay close to the planned route |
+| **Mission** | Ensure successful mission completion |
