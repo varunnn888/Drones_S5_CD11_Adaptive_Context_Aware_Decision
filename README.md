@@ -69,15 +69,4 @@ flowchart TD
     H --> I
     I --> J
     J -->|Re-evaluate| B
-
-    style A fill:#1e3a5f,stroke:#4a90d9,color:#fff
-    style B fill:#1e3a5f,stroke:#4a90d9,color:#fff
-    style C fill:#1e3a5f,stroke:#4a90d9,color:#fff
-    style D fill:#1e3a5f,stroke:#4a90d9,color:#fff
-    style E fill:#7b3f00,stroke:#d4a017,color:#fff
-    style F fill:#1a4731,stroke:#2ecc71,color:#fff
-    style G fill:#4a1942,stroke:#9b59b6,color:#fff
-    style H fill:#4a1942,stroke:#9b59b6,color:#fff
-    style I fill:#1e3a5f,stroke:#4a90d9,color:#fff
-    style J fill:#1e3a5f,stroke:#4a90d9,color:#fff
 ```
