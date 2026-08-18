@@ -70,3 +70,71 @@ flowchart TD
     I --> J
     J -->|Re-evaluate| B
 ```
+
+### 3.Input and Environment Modeling
+
+The system uses four main environmental/mission inputs:
+
+| Input | Purpose |
+|-------|---------|
+| Battery Level | Represents the available UAV energy |
+| Wind Speed | Represents environmental disturbance |
+| Obstacle Distance | Determines the level of navigation risk |
+| Mission Priority | Represents the importance of completing the mission |
+
+These values can be changed during simulation to demonstrate how the UAV responds to different operating conditions.
+
+### 4.Context Detection
+
+The input conditions are interpreted by the decision system to determine the UAV's current context. Typical contexts used in the project include:
+
+- **Normal** – Suitable environmental conditions.
+- **Obstacle Nearby** – An obstacle requires increased safety consideration.
+- **High Wind** – Strong wind requires safer flight behavior.
+- **Low Battery** – Energy conservation becomes important.
+
+The detected context determines which decision strategy and weights should be applied.
+
+### 5.Adaptive Multi-Factor Decision Making
+
+#### 5.1 Decision Factors
+
+ACMFDS considers five major decision factors:
+
+| Factor | Description |
+|--------|-------------|
+| **Energy** | Reduces unnecessary energy consumption |
+| **Safety** | Prioritizes safe operation and obstacle clearance |
+| **Time** | Considers the time required to complete the route |
+| **Tracking** | Encourages the UAV to remain close to the desired route |
+| **Mission** | Considers the importance of mission completion |
+
+#### 5.2 Decision Cost Formula
+
+The combined decision cost is represented as:
+
+$$C = \sum_{i=1}^{n} w_i f_i$$
+
+For this project, the expanded form is:
+
+$$C = w_E E + w_S S + w_T T + w_R R + w_M M$$
+
+| Symbol | Description |
+|--------|-------------|
+| **C** | Overall decision cost |
+| **E** | Energy cost |
+| **S** | Safety cost |
+| **T** | Time cost |
+| **R** | Tracking cost |
+| **M** | Mission cost |
+| **w_E, w_S, w_T, w_R, w_M** | Corresponding adaptive weights |
+
+#### 5.3 Context-Dependent Weights
+
+Not every factor is equally important in every situation. The weights are adapted based on the current context rather than remaining fixed:
+
+| Context | Priority |
+|---------|----------|
+| **Normal** | Efficiency and mission progress receive more consideration |
+| **Obstacle Nearby** | Safety receives greater importance |
+| **High Wind** | Safe operation becomes more important than minimizing travel time |
