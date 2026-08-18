@@ -1,6 +1,7 @@
 
 <img width="1948" height="568" alt="logo-branding-amrita-universiy-2024" src="https://github.com/user-attachments/assets/db019883-cfb1-46ad-9811-7f7ec523249e" />
-# Adaptive_Context_Aware_Decision
+
+## Adaptive_Context_Aware_Decision
 
 ## Team Members
 
