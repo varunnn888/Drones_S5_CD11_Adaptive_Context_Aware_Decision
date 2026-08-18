@@ -36,3 +36,48 @@ $$C = \sum_i w_i f_i$$
 When the direct path is blocked, the planner evaluates alternative routes using distance, clearance, and cost, rejects unsafe routes, and selects a feasible detour.
 
 The project integrates **MATLAB**, **Simulink**, and **Stateflow** to demonstrate context detection, adaptive decision-making, obstacle avoidance, dynamic path planning, waypoint navigation, changing environmental conditions, and successful mission completion.
+
+
+
+## Methodology
+
+### 1.Overall Methodology
+
+The proposed Adaptive Contextual Multi-Factor Decision System (ACMFDS) follows a closed-loop decision-making process. The UAV receives environmental and mission information such as battery level, wind speed, obstacle distance, and mission priority. These inputs are used to determine the current operating context.
+
+Based on the detected context, ACMFDS selects appropriate decision weights, flight speed, operating mode, and action. If the direct path is safe, the UAV continues toward the waypoint. If an obstacle blocks the path, the adaptive planner evaluates possible detours based on distance, safety clearance, and cost. The selected path is then used by the UAV simulation, while changing environmental conditions can trigger a new decision.
+
+### 2.Methodology Flow Diagram
+
+```mermaid
+flowchart TD
+    A([Mission Inputs\nBattery · Wind · Obstacle · Priority])
+    B([Context Detection\nNormal / High Wind / Obstacle / Low Battery])
+    C([Adaptive Weights\nEnergy · Safety · Time · Tracking · Mission])
+    D([Decision Making\nSpeed · Mode · Action])
+    E{Direct Path Safe?}
+    F([Continue Flight])
+    G([Adaptive Path Planning\nEvaluate Routes])
+    H([Select Safe Detour])
+    I([UAV Simulation\nWaypoint Navigation])
+    J([Environment Update\nBattery · Wind · Obstacles · Context])
+
+    A --> B --> C --> D --> E
+    E -- YES --> F
+    E -- NO --> G --> H
+    F --> I
+    H --> I
+    I --> J
+    J -->|Re-evaluate| B
+
+    style A fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style B fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style C fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style D fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style E fill:#7b3f00,stroke:#d4a017,color:#fff
+    style F fill:#1a4731,stroke:#2ecc71,color:#fff
+    style G fill:#4a1942,stroke:#9b59b6,color:#fff
+    style H fill:#4a1942,stroke:#9b59b6,color:#fff
+    style I fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style J fill:#1e3a5f,stroke:#4a90d9,color:#fff
+```
