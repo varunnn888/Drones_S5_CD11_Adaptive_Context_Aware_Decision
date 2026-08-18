@@ -333,3 +333,265 @@ This enables the UAV to adapt its behavior according to changing environmental a
 | **Time** | Minimize unnecessary delays |
 | **Tracking** | Stay close to the planned route |
 | **Mission** | Ensure successful mission completion |
+
+# Results
+
+## Simulation Results
+
+The Adaptive Context-Aware Multi-Objective Flight Decision Algorithm (ACMFDS) was evaluated under multiple dynamic operating conditions. During execution, the UAV continuously monitored battery level, wind speed, obstacle distance, and mission priority to determine the current operating context.
+
+The simulation demonstrates that the proposed framework successfully performs:
+
+- Context-aware decision making
+- Dynamic weight adaptation
+- Adaptive obstacle avoidance
+- Multi-objective route selection
+- Safe waypoint navigation
+- Dynamic context switching
+- Mission completion under changing environmental conditions
+
+---
+
+## Test Case 1 – Dynamic Context Switching
+
+The first experiment demonstrates how the UAV adapts to changing environmental conditions during mission execution.
+
+| Parameter | Observation |
+|-----------|-------------|
+| Initial Context | Obstacle Nearby |
+| Context Changes | Obstacle Nearby → High Wind → Normal |
+| Obstacle Avoidance | Successful |
+| Waypoints Reached | 5 |
+| Mission Status | Completed |
+
+### Observations
+
+- Safety weight increased when an obstacle appeared.
+- Flight speed reduced automatically.
+- The planner generated a safe detour.
+- During high wind conditions the UAV entered Safety Mode.
+- After the environment became normal, the UAV resumed normal flight.
+- Mission completed successfully.
+
+---
+
+## Test Case 2 – Adaptive Path Planning
+
+The planner evaluates multiple candidate routes whenever the direct path is blocked.
+
+Example planner output:
+
+| Route | Clearance | Status |
+|--------|-----------|--------|
+| East | Safe | Selected |
+| West | Unsafe | Rejected |
+| North | Safe | Candidate |
+| South | Unsafe | Rejected |
+
+The planner selected the route having minimum cost while satisfying safety constraints.
+
+---
+
+## Test Case 3 – Context Transition
+
+During execution, the UAV transitioned through multiple operating contexts.
+
+```mermaid
+flowchart LR
+A[Obstacle Nearby] --> B[High Wind]
+B --> C[Normal]
+```
+
+The transition demonstrates that ACMFDS continuously monitors environmental conditions instead of relying on a single precomputed decision.
+
+---
+
+## Test Case 4 – Mission Completion
+
+The final simulation completed successfully.
+
+| Metric | Result |
+|---------|--------|
+| Mission Status | Success |
+| Final Context | Normal |
+| Final Position | Mission Completed |
+| Battery Remaining | Approximately 84.6% |
+| Waypoints Reached | All Waypoints |
+
+---
+
+## Performance Comparison
+
+| Feature | Conventional Planning | Proposed ACMFDS |
+|-----------|----------------------|-----------------|
+| Context Awareness | No | Yes |
+| Dynamic Decision Making | No | Yes |
+| Adaptive Weights | No | Yes |
+| Obstacle Replanning | Limited | Yes |
+| Stateflow Integration | No | Yes |
+| Dynamic Context Switching | No | Yes |
+| Mission Adaptation | No | Yes |
+
+---
+
+## Result Summary
+
+The simulation demonstrates that the proposed ACMFDS successfully:
+
+- Detects changing operating conditions.
+- Updates decision priorities dynamically.
+- Adjusts flight speed automatically.
+- Generates safe alternative paths.
+- Avoids obstacles.
+- Maintains mission progress.
+- Successfully completes the mission.
+
+---
+
+# Project Files
+
+The repository contains the following project files.
+
+| File | Description |
+|------|-------------|
+| ACMFDS_Stateflow.slx | Simulink Stateflow model |
+| ACMFDS_MissionData.mat | Mission parameters |
+| acmfds_uav_v2.m | Main MATLAB simulation |
+| multiObstaclePlanner.m | Adaptive path planner |
+| multiObstacleExperiment.m | Multiple obstacle experiments |
+| obstacleCountExperiment.m | Obstacle analysis |
+| MultiObjectiveResults.mat | Simulation results |
+| MultiObjectiveResults.xlsx | Exported results |
+| README.md | Project documentation |
+
+---
+
+# Conclusion
+
+This project presented an Adaptive Context-Aware Multi-Objective Flight Decision Algorithm (ACMFDS) for autonomous UAV navigation in dynamic environments. The proposed framework combines context detection, adaptive multi-objective decision making, Stateflow-based behavioral modeling, and MATLAB-based adaptive path planning within a unified architecture.
+
+Unlike conventional approaches that operate with fixed decision priorities, ACMFDS continuously updates its decision weights according to environmental conditions such as obstacle proximity, wind speed, battery level, and mission priority. The adaptive planner evaluates multiple feasible routes and selects the safest low-cost alternative whenever the direct path becomes blocked.
+
+Simulation results demonstrate successful context switching, adaptive obstacle avoidance, safe waypoint navigation, dynamic flight mode selection, and mission completion under changing environmental conditions. The integration of MATLAB, Simulink, and Stateflow provides a practical framework for developing intelligent autonomous UAV systems capable of balancing safety, efficiency, mission objectives, and energy utilization.
+
+Overall, the proposed ACMFDS improves the adaptability, robustness, and autonomy of UAV mission planning while providing an extensible platform for future intelligent aerial navigation research.
+
+---
+
+# Future Scope
+
+Several enhancements can be incorporated into the proposed framework.
+
+- Integration with real UAV hardware.
+- Real-time GPS based navigation.
+- Vision-based obstacle detection.
+- Deep Learning based context prediction.
+- Reinforcement Learning for adaptive policy optimization.
+- Multi-UAV cooperative mission planning.
+- Dynamic weather forecasting integration.
+- 3D terrain-aware path planning.
+- Real-time onboard implementation using embedded systems.
+
+---
+
+# References
+
+1. Base Research Paper (Provided for the Project)
+
+2. MathWorks — MATLAB
+
+https://www.mathworks.com/products/matlab.html
+
+3. MathWorks — Simulink
+
+https://www.mathworks.com/products/simulink.html
+
+4. MathWorks — Stateflow
+
+https://www.mathworks.com/products/stateflow.html
+
+5. LaValle, S. M.
+
+Planning Algorithms.
+
+https://planning.cs.uiuc.edu/
+
+6. Sebastian Thrun, Wolfram Burgard, Dieter Fox.
+
+Probabilistic Robotics.
+
+https://mitpress.mit.edu/9780262201629/probabilistic-robotics/
+
+7. UAV Path Planning Survey
+
+https://ieeexplore.ieee.org/
+
+8. Multi-Objective Optimization for Autonomous UAV Navigation
+
+https://www.sciencedirect.com/
+
+---
+
+# Repository Structure
+
+```
+ACMFDS/
+│
+├── ACMFDS_Stateflow.slx
+├── ACMFDS_MissionData.mat
+├── acmfds_uav_v2.m
+├── multiObstaclePlanner.m
+├── multiObstacleExperiment.m
+├── obstacleCountExperiment.m
+├── MultiObjectiveResults.mat
+├── MultiObjectiveResults.xlsx
+├── README.md
+├── report.pdf
+└── presentation.pptx
+```
+
+---
+
+# Software Requirements
+
+| Software | Version |
+|-----------|----------|
+| MATLAB | R2023a or later |
+| Simulink | Included |
+| Stateflow | Included |
+
+---
+
+# How to Run
+
+1. Open MATLAB.
+
+2. Place all project files in the same folder.
+
+3. Open
+
+```
+ACMFDS_Stateflow.slx
+```
+
+4. Run
+
+```matlab
+acmfds_uav_v2
+```
+
+5. Execute the experiment files if required.
+
+```matlab
+multiObstacleExperiment
+```
+
+```matlab
+obstacleCountExperiment
+```
+
+---
+
+# Acknowledgement
+
+The authors sincerely thank **Amrita Vishwa Vidyapeetham**, the Department of Artificial Intelligence, and the faculty members for their continuous guidance and support throughout the development of this project.
