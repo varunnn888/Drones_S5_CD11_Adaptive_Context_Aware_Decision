@@ -19,9 +19,9 @@ This project proposes an Adaptive Contextual Multi-Factor Decision System (ACMFD
 
 
 
-## Introduction
+# Introduction
 
-ACMFDS (Adaptive Contextual Multi-Factor Decision System) is a MATLAB/Simulink-based framework for autonomous UAV navigation in dynamic environments. It considers battery level, wind speed, obstacle distance, and mission priority to identify the current context and adapt the UAV's speed, flight mode, and navigation action. The system uses five factors—Energy, Safety, Time, Tracking, and Mission—with context-dependent weights to make balanced decisions.
+ACMFDS (Adaptive Contextual Multi-Factor Decision System) is a MATLAB/Simulink-based framework for autonomous UAV navigation in dynamic environments. It considers battery level, wind speed, obstacle distance, and mission priority to identify the current context and adapt the UAV's speed, flight mode, and navigation action. The system uses five factors—Energy,Time, Safety, Tracking, and Mission—with context-dependent weights to make balanced decisions.
 
 The overall decision cost is represented as:
 
