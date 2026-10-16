@@ -1,1023 +1,558 @@
+#  Adaptive Multi-Objective Flight Decision Algorithm for Autonomous Quadcopters
 
-# DroneEnv: A Physics-Based 3D Quadcopter Simulation with Gymnasium and PyBullet
+A physically grounded 6-DOF quadcopter simulation built with **Python 3.10+ and PyBullet**, centered around ACMFDS: an explainable, rule-based, multi-objective flight decision system.
 
-## Abstract
+The system executes a complete simulated mission:
 
-This project presents a physics-based simulation environment for a six-degree-of-freedom (6-DOF) quadcopter using PyBullet and the Gymnasium reinforcement learning interface. The environment models translational and rotational dynamics, thrust and torque actuation, obstacle proximity sensing, goal-directed navigation, reward-based learning, and episode termination. The simulation is formulated as a discounted Markov decision process (MDP), enabling the application of continuous-control reinforcement learning algorithms.
+**INITIALIZE → TAKEOFF → HOVER → MOVE FORWARD → SLOW DOWN → LAND**
 
-The project also incorporates the **Adaptive Contextual Multi-Functional Decision System (ACMFDS)** as an explainability layer within the Gymnasium environment. ACMFDS classifies flight contexts and assigns weights to safety, energy efficiency, obstacle clearance, and mission progress. In the `DroneEnv` interface, ACMFDS decisions are recorded as diagnostic information rather than directly controlling the reinforcement learning agent's actions. The primary mission pipeline is implemented separately.
+All flight behaviour is evaluated through rigid-body physics and an explicit decision-to-actuation pipeline.
 
-This README documents the mathematical formulation, system parameters, observation and action spaces, reward function, sensing model, initialization distribution, termination criteria, interface compliance, reproducibility procedures, and current limitations.
-
-**Keywords:** Quadcopter simulation, reinforcement learning, PyBullet, Gymnasium, Markov decision process, rigid-body dynamics, obstacle avoidance, continuous control, contextual decision-making, ACMFDS.
-
----
-
-## 1. Introduction
-
-Autonomous aerial navigation requires the integration of dynamic modelling, control, perception, and safety-aware decision-making. A quadcopter must regulate its attitude and altitude while navigating toward a target and avoiding obstacles within a constrained operating environment.
-
-The purpose of this project is to provide a reproducible physics-based simulation environment for studying these challenges. The simulated vehicle is represented as a rigid body whose motion is determined by forces, torques, gravity, drag, and physical contact interactions.
-
-The environment exposes the simulation through the Gymnasium API, allowing compatible reinforcement learning algorithms to interact with the vehicle through continuous-valued control commands. An eight-ray virtual range finder supplies obstacle proximity information, while a reward function encourages goal-directed motion and penalizes unsafe or unstable behaviour.
-
-The project additionally integrates ACMFDS to provide contextual decision information and an interpretable representation of competing flight objectives.
-
-### 1.1 Objectives
-
-The principal objectives are:
-
-- To model quadcopter motion using a rigid-body physics engine.
-- To formulate the navigation task as a continuous-action Markov decision process.
-- To define physically interpretable observation and action spaces.
-- To implement goal-directed reward shaping with explicit safety penalties.
-- To provide virtual range sensing for obstacle proximity estimation.
-- To expose contextual decision information through ACMFDS.
-- To support reproducible experiments using Gymnasium-compatible reset, step, and rendering interfaces.
-
-### 1.2 System Architecture
-
-The project contains two distinct execution paths:
-
-1. **Mission execution:** The default pipeline, launched using `python main.py`, runs the ACMFDS mission implementation.
-2. **Reinforcement learning environment:** `DroneEnv` provides the Gymnasium interface for policy training, evaluation, and environment compliance testing.
-
-The distinction is important: the RL environment is an optional experimental interface and is not part of the project's validated flight-result set.
+> [!IMPORTANT]
+> **Terminology note:** Earlier revisions expanded ACMFDS as "Adaptive Collision Mitigation and Flight Decision System." The project title now standardizes the name as **Adaptive Context-Aware Multi-Objective Flight Decision System**. The earlier expansion is retained only as a historical note.
 
 ---
 
-## 2. Mathematical Formulation
+## 1. What the System Does
 
-### 2.1 Markov Decision Process
+The default execution path combines PyBullet physics, a validated flight state, explainable ACMFDS decisions, a sliding-mode actuation layer, and per-step telemetry logging.
 
-The navigation problem is formulated as a discounted Markov decision process:
+### System Architecture
+
+```text
+┌─────────────────────────┐
+│   PyBullet Physics      │
+│   Rigid-body dynamics   │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│    Live FlightState     │
+│ Pose, velocity, sensors │
+│ Battery and wind models │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│        ACMFDS           │
+│ Context classification  │
+│ Multi-objective scoring │
+│ Safety checks and       │
+│ explainable decisions   │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│   FlightCommand         │
+│ Mission/ACMFDS command  │
+│ composition             │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│ Sliding-Mode Actuation  │
+│ Normalized thrust       │
+│ Torque commands         │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│   PyBullet Physics      │
+│ Forces and torques      │
+│ Updated physical state  │
+└─────────────────────────┘
+
+    Per-step state and decisions
+                 │
+                 ▼
+┌─────────────────────────┐
+│ Flight Logger           │
+│ CSV + summary metrics   │
+└─────────────────────────┘
+```
+
+### Per-Control-Step Workflow
+
+The simulation operates at a control rate of **120 Hz**.
+
+1. **Sense:** Read the drone's pose, velocity, orientation, and forward-cone ray clearances from PyBullet.
+2. **Model:** Update battery consumption and wind disturbances. These are modeled inputs, not measurements from physical battery or wind sensors.
+3. **Decide:** ACMFDS classifies the current context, evaluates objective weights and safety constraints, and produces an explainable `Decision` with an executable `FlightCommand`.
+4. **Compose:** The mission sequencer proposes motion. ACMFDS can override or restrict that motion according to its decision and safety constraints.
+5. **Actuate:** The sliding-mode control layer converts the command into normalized thrust and torque demands.
+6. **Simulate:** Apply forces and torques to the rigid body through PyBullet.
+7. **Log:** Record the state, decisions, reasons, candidate evaluations, commands, and evaluation metrics.
+
+A decision such as `MOVE_FORWARD` is not a motor RPM. The decision-to-command mapping is explicit in `decision/acmfds.py`, while control commands are executed by `controllers/actuation.py`.
+
+### Conflict Priority
+
+The documented priority is:
+
+**Collision safety > energy conservation > mission progress**
+
+A low-battery drone must still respond to a critical obstacle. When the available detour directions are blocked, the system can climb within its configured ceiling or hold, rather than automatically descending into an obstacle.
+
+The exact action depends on the current context, clearances, and implemented safety checks.
+
+---
+
+## 2. Engineering Design and Important Distinctions
+
+### No PID Controller
+
+The default actuation architecture uses **Sliding Mode Control (SMC)** rather than a PID controller.
+
+SMC is a nonlinear feedback-control method based on a sliding surface and switching or saturation-based control terms. It can provide robustness against certain disturbances when appropriately designed and tuned.
+
+The project does not claim to have no feedback. SMC is a feedback controller; the design claim is that the default controller does not use PID.
+
+The optional learned feedforward model in `controllers/data_driven_controller.py` is trained using inverse-dynamics targets:
 
 $$
-\mathcal{M}
-=
-\left\langle
-\mathcal{S},\mathcal{A},P,r,\gamma,\mathcal{D}
-\right\rangle,
+T^* = m\left(g+\ddot{z}_{\mathrm{ref}}\right)
++ c\dot{z}_{\mathrm{ref}}
 $$
 
 where:
 
-- \(\mathcal{S}\) denotes the observation or state representation space.
-- \(\mathcal{A}\) denotes the continuous action space.
-- \(P\) denotes the transition kernel induced by the physics engine.
-- \(r\) denotes the scalar reward function.
-- \(\gamma\in[0,1]\) denotes the discount factor.
-- \(\mathcal{D}\) denotes the initial-state distribution.
+- $T^*$ is the target thrust.
+- $m$ is the modeled mass.
+- $g$ is gravitational acceleration.
+- $\ddot{z}_{\mathrm{ref}}$ is reference vertical acceleration.
+- $\dot{z}_{\mathrm{ref}}$ is reference vertical velocity.
+- $c$ is the modeled drag coefficient.
 
-At control step \(k\), the agent receives observation \(o_k\), selects action \(a_k\), and receives reward \(r_k\) and the subsequent observation \(o_{k+1}\).
+An earlier revision trained the learned model on PID-derived targets. That approach was removed, and the model was retrained using inverse-dynamics targets.
 
-The transition is generated by the PyBullet rigid-body simulation:
+### No Reinforcement Learning in the Default Path
 
-$$
-s_{k+1}
-\sim
-P(\cdot\mid s_k,a_k)
-=
-\operatorname{PyBulletStep}
-\left(
-p_k,v_k,\Theta_k,\omega_k;
-a_k,\Delta t_{\mathrm{ctrl}}
-\right).
-$$
+The default flight-decision path uses explainable ACMFDS rules and the SMC actuation layer. Reinforcement learning is not required to execute the default mission.
 
-The physics engine determines the resulting motion; the environment does not use scripted kinematic repositioning to generate flight trajectories.
+The optional learned component is an altitude-only feedforward controller. It is separate from the ACMFDS decision layer and is not required for the documented scenario results.
 
-The objective of a reinforcement learning policy \(\pi\) is to maximize the expected discounted return:
+### Physics-Based Flight
 
-$$
-J(\pi)
-=
-\mathbb{E}_{\pi}
-\left[
-\sum_{k=0}^{T-1}
-\gamma^k r_k
-\right],
-$$
+The drone is modeled as a 1.0 kg rigid body with PyBullet-computed inertia:
 
-where \(T\) is the episode length.
+| Parameter | Value |
+|---|---:|
+| Mass | 1.0 kg |
+| $I_{xx}$ | 0.0230 kg·m² |
+| $I_{yy}$ | 0.0230 kg·m² |
+| $I_{zz}$ | 0.0417 kg·m² |
+| Hover thrust | 9.81 N |
+| Maximum thrust | 20 N |
 
-### 2.2 Temporal Discretization
+The implementation uses physical forces and torques instead of teleporting the drone to desired positions.
 
-The simulation operates with a fixed physics timestep and a slower control interface.
+Two physics implementation bugs were corrected during validation:
 
-| Parameter | Symbol | Value |
-|---|---|---:|
-| Physics timestep | \(\Delta t_{\mathrm{phys}}\) | \(1/120\) s |
-| Physics substeps per control step | \(n_{\mathrm{sub}}\) | 2 |
-| Control timestep | \(\Delta t_{\mathrm{ctrl}}\) | \(1/60\) s |
-| Control frequency | \(f_{\mathrm{ctrl}}\) | 60 Hz |
-| Maximum episode horizon | \(k_{\max}\) | 500 control steps |
-| Nominal maximum episode duration | \(T_{\max}\) | 8.33 s |
-| Physics solver iterations | — | 10 |
+- The inertia synchronization logic used the wrong `getDynamicsInfo` index.
+- World-frame drag and wind forces were applied at the world origin rather than at the drone's center of mass, creating an unintended lever-arm torque.
 
-The control period is given by
+### Tested, Not Merely Claimed
 
-$$
-\Delta t_{\mathrm{ctrl}}
-=
-n_{\mathrm{sub}}\Delta t_{\mathrm{phys}}
-=
-\frac{2}{120}
-=
-\frac{1}{60}\ \mathrm{s}.
-$$
-
-The nominal episode horizon is therefore
-
-$$
-T_{\max}
-=
-k_{\max}\Delta t_{\mathrm{ctrl}}
-=
-\frac{500}{60}
-\approx 8.33\ \mathrm{s}.
-$$
-
-An episode can end before this horizon if the goal is reached or a failure condition occurs.
+Scenario results are based on logged simulation runs. Remaining limitations are documented in Section 9.
 
 ---
 
-## 3. Quadcopter Dynamics
+## 3. Installation
 
-### 3.1 Physical Parameters
+Python 3.10 or later is recommended. The project was developed and tested on Python 3.13.
 
-The simulated quadcopter is represented by a single PyBullet rigid body.
-
-| Parameter | Symbol | Value |
-|---|---|---:|
-| Mass | \(m\) | \(1.0\ \mathrm{kg}\) |
-| Gravitational acceleration | \(g\) | \(9.81\ \mathrm{m/s^2}\) |
-| Nominal hover thrust | \(T_h=mg\) | \(9.81\ \mathrm{N}\) |
-| Minimum thrust | \(T_{\min}\) | \(0\ \mathrm{N}\) |
-| Maximum thrust | \(T_{\max}\) | \(20\ \mathrm{N}\) |
-| Maximum roll torque | \(\tau_{\max}\) | \(1.5\ \mathrm{N\,m}\) |
-| Maximum pitch torque | \(\tau_{\max}\) | \(1.5\ \mathrm{N\,m}\) |
-| Maximum yaw torque | \(\tau_{\max}^{\mathrm{yaw}}\) | \(0.75\ \mathrm{N\,m}\) |
-| Arm length | \(\ell\) | \(0.25\ \mathrm{m}\) |
-| Collision-box half-extents | — | \((0.25,0.25,0.08)\ \mathrm{m}\) |
-| Linear drag coefficient | \(c_v\) | \(0.25\ \mathrm{N\,s/m}\) |
-| Angular drag coefficient | \(c_\omega\) | \(0.15\ \mathrm{N\,m\,s}\) |
-
-The nominal hover thrust is the thrust required to balance gravitational force for a level vehicle under the simplified nominal conditions:
-
-$$
-T_h=mg=(1.0)(9.81)=9.81\ \mathrm{N}.
-$$
-
-### 3.2 Translational Dynamics
-
-Let \(p\in\mathbb{R}^3\) denote position, \(v\in\mathbb{R}^3\) denote linear velocity, \(T\) denote thrust magnitude, and \(\hat b_3\) denote the body-frame thrust direction expressed in world coordinates.
-
-The translational equation of motion is
-
-$$
-m\dot v
-=
-T\hat b_3
-+
-F_{\mathrm{drag}}
-+
-mg\hat z_{\mathrm{world}}
-+
-F_{\mathrm{contact}}.
-$$
-
-Here, \(\hat z_{\mathrm{world}}\) follows the gravity sign convention used by the physics implementation, \(F_{\mathrm{drag}}\) is the aerodynamic drag approximation, and \(F_{\mathrm{contact}}\) represents forces arising from physical contact.
-
-The linear drag model is
-
-$$
-F_{\mathrm{drag}}=-c_vv.
-$$
-
-Thrust is applied along the vehicle's local vertical axis. Consequently, changing the vehicle's attitude changes the thrust direction and produces horizontal acceleration without introducing an independent lateral-force command.
-
-### 3.3 Rotational Dynamics
-
-Let \(\omega\in\mathbb{R}^3\) denote angular velocity, \(I\) denote the inertia tensor, and \(\tau_{\mathrm{cmd}}\) denote the commanded torque vector. Rotational dynamics are expressed as
-
-$$
-I\dot\omega
-+
-\omega\times(I\omega)
-=
-\tau_{\mathrm{cmd}}
-+
-\tau_{\mathrm{drag}}.
-$$
-
-The angular drag approximation is
-
-$$
-\tau_{\mathrm{drag}}=-c_\omega\omega.
-$$
-
-The term \(\omega\times(I\omega)\) represents the gyroscopic coupling associated with rigid-body rotation.
-
-Both drag forces and torques are applied at the body centre of mass in the world frame. This application point avoids introducing an unintended moment through an incorrect force lever arm.
-
----
-
-## 4. Action Space and Control Mapping
-
-### 4.1 Continuous Action Space
-
-The action vector is a four-dimensional continuous control input:
-
-$$
-\mathcal{A}=[-1,1]^4,
-$$
-
-$$
-a_k=
-\begin{bmatrix}
-a_T & a_\phi & a_\theta & a_\psi
-\end{bmatrix}^{\mathsf T}.
-$$
-
-The components represent normalized thrust, roll torque, pitch torque, and yaw torque, respectively.
-
-Before physical actuation, the input is clipped to the permitted interval:
-
-$$
-\tilde a_k
-=
-\operatorname{clip}(a_k,-1,1).
-$$
-
-### 4.2 Thrust Mapping
-
-The thrust command uses a piecewise affine mapping around the nominal hover thrust:
-
-$$
-T(a_T)=
-\begin{cases}
-T_h+a_T(T_{\max}-T_h), & a_T\geq 0,\\[4pt]
-T_h+a_T(T_h-T_{\min}), & a_T<0.
-\end{cases}
-$$
-
-Substituting the implementation parameters gives
-
-$$
-T(a_T)=
-\begin{cases}
-9.81+10.19a_T, & a_T\geq0,\\[4pt]
-9.81+9.81a_T, & a_T<0.
-\end{cases}
-$$
-
-The resulting thrust is bounded by
-
-$$
-T_{\min}\leq T(a_T)\leq T_{\max}.
-$$
-
-In particular,
-
-$$
-T(-1)=0,\qquad
-T(0)=9.81,\qquad
-T(1)=20\ \mathrm{N}.
-$$
-
-Thus, a neutral thrust command corresponds to nominal hover thrust rather than half of the maximum thrust.
-
-### 4.3 Torque Mapping
-
-The commanded torques are
-
-$$
-\tau_{\mathrm{roll}}=1.5a_\phi,
-$$
-
-$$
-\tau_{\mathrm{pitch}}=1.5a_\theta,
-$$
-
-$$
-\tau_{\mathrm{yaw}}=0.75a_\psi,
-$$
-
-where torques are measured in \(\mathrm{N\,m}\).
-
-The yaw torque limit is half the roll and pitch torque limit. These are the simulator's prescribed control limits, not experimentally identified actuator characteristics.
-
----
-
-## 5. Observation Space
-
-### 5.1 Observation Vector
-
-The observation space is a 27-dimensional `float32` Gymnasium `Box`.
-
-$$
-o_k=
-\begin{bmatrix}
-p_k,\,
-v_k,\,
-\eta_k,\,
-\omega_k,\,
-p_g,\,
-\Delta_g,\,
-d_g,\,
-\rho_k
-\end{bmatrix}^{\mathsf T},
-$$
-
-where \(p_k\) is vehicle position, \(v_k\) is linear velocity, \(\eta_k\) is Euler attitude, \(\omega_k\) is angular velocity, \(p_g\) is the goal position, \(\Delta_g\) is the relative goal vector, \(d_g\) is the goal distance, and \(\rho_k\) contains eight range-sensor readings.
-
-| Indices | Variable | Description | Unit |
-|---|---|---|---|
-| 0–2 | \(p\) | Position \((x,y,z)\) | m |
-| 3–5 | \(v\) | Linear velocity | m/s |
-| 6–8 | \(\eta=(\phi,\theta,\psi)\) | Roll, pitch, yaw | rad |
-| 9–11 | \(\omega\) | Angular velocity | rad/s |
-| 12–14 | \(p_g\) | Goal position | m |
-| 15–17 | \(\Delta_g\) | Relative goal vector | m |
-| 18 | \(d_g\) | Euclidean goal distance | m |
-| 19–26 | \(\rho\) | Eight range-sensor fractions | dimensionless |
-
-### 5.2 Goal-Relative Features
-
-The relative goal vector is defined as
-
-$$
-\Delta_g=p_g-p.
-$$
-
-The Euclidean distance to the goal is
-
-$$
-d_g=\|\Delta_g\|_2
-=
-\sqrt{
-(p_{g,x}-x)^2+
-(p_{g,y}-y)^2+
-(p_{g,z}-z)^2
-}.
-$$
-
-These features provide both directional displacement information and a scalar measure of remaining distance.
-
-### 5.3 Observation Bounds and Saturation
-
-The declared observation bounds include:
-
-- Euler angles: \([-\pi,\pi]\).
-- Linear velocity: \([-15,15]\ \mathrm{m/s}\).
-- Angular velocity: \([-20,20]\ \mathrm{rad/s}\).
-- Position and goal coordinates: \([-10,10]\ \mathrm{m}\), with non-negative altitude.
-- Relative goal vector: \([-20,20]\ \mathrm{m}\).
-- Goal distance: \([0,30]\ \mathrm{m}\).
-- Range-sensor fractions: \([0,1]\).
-
-Each observation component is clipped to its declared bounds:
-
-$$
-o_{k,i}
-=
-\operatorname{clip}
-\left(
-o^{\mathrm{raw}}_{k,i},
-o_i^{\mathrm{low}},
-o_i^{\mathrm{high}}
-\right).
-$$
-
-The observations use physically scaled SI units and are **not normalized to a common unit interval**. Policy-training pipelines that are sensitive to feature scale may require an explicit observation-normalization wrapper.
-
----
-
-## 6. Reward Function
-
-### 6.1 Reward Decomposition
-
-The reward function combines goal progress, goal attainment, continued operation, altitude regulation, attitude stability, control effort, obstacle proximity, terminal events, and time cost.
-
-Let \(d_k\) be the current goal distance, \(d_{k-1}\) the preceding goal distance, \(d_{\min}\) the minimum range reading in metres, \(e_z=z-p_{g,z}\) the altitude error, and \(\mathbb{1}[\cdot]\) the indicator function.
-
-The total reward is
-
-$$
-\begin{aligned}
-r_k={}&
-r_{\mathrm{prog}}
-+r_{\mathrm{goal}}
-+r_{\mathrm{alive}}
-+r_z
-+r_{\mathrm{tilt}}\\
-&+r_u+r_{\mathrm{prox}}
-+r_{\mathrm{term}}
-+r_{\mathrm{time}}.
-\end{aligned}
-$$
-
-### 6.2 Reward Components
-
-| Component | Mathematical definition | Purpose |
-|---|---|---|
-| Goal progress | \(r_{\mathrm{prog}}=15(d_{k-1}-d_k)\) | Rewards reduction in goal distance |
-| Goal attainment | \(r_{\mathrm{goal}}=100\mathbb{1}[d_k<0.40]\) | Rewards entering the target region |
-| Alive bonus | \(r_{\mathrm{alive}}=0.15\) | Provides a small per-step reward |
-| Altitude regulation | \(r_z=-0.75e_z^2\) | Penalizes altitude deviation |
-| Attitude stability | \(r_{\mathrm{tilt}}=-0.4(\phi^2+\theta^2)\) | Penalizes roll and pitch deviation |
-| Control effort | \(r_u=-0.01\|a_k\|_2^2\) | Discourages large control commands |
-| Obstacle proximity | \(r_{\mathrm{prox}}=-2.5\max(0,d_{\mathrm{safe}}-d_{\min})\) | Penalizes insufficient clearance |
-| Obstacle collision | \(-60\mathbb{1}[\mathrm{obstacle\ contact}]\) | Penalizes obstacle contact |
-| Ground contact | \(-50\mathbb{1}[\mathrm{ground}]\) | Penalizes ground failure |
-| Out-of-bounds event | \(-50\mathbb{1}[p\notin\mathcal B]\) | Penalizes leaving the permitted region |
-| Excessive tilt | \(-40\mathbb{1}[\max(|\phi|,|\theta|)>1.3]\) | Penalizes excessive attitude |
-| Time cost | \(r_{\mathrm{time}}=-0.05\) | Encourages efficient completion |
-
-The target radius and safe-clearance threshold are
-
-$$
-r_{\mathrm{tgt}}=0.40\ \mathrm{m},
-\qquad
-d_{\mathrm{safe}}=0.80\ \mathrm{m}.
-$$
-
-The terminal-event reward is the sum of the applicable failure penalties:
-
-$$
-\begin{aligned}
-r_{\mathrm{term}}={}&
--60\mathbb{1}[\mathrm{obstacle\ contact}]\\
-&-50\mathbb{1}[\mathrm{ground}]\\
-&-50\mathbb{1}[p\notin\mathcal B]\\
-&-40\mathbb{1}[\max(|\phi|,|\theta|)>1.3].
-\end{aligned}
-$$
-
-### 6.3 Goal-Progress Shaping
-
-The progress reward can be expressed through a distance-based potential function:
-
-$$
-\Phi(s)=-15d(s).
-$$
-
-Consequently,
-
-$$
-r_{\mathrm{prog}}
-=
-\Phi(s_k)-\Phi(s_{k-1})
-=
-15(d_{k-1}-d_k).
-$$
-
-For an episode containing transitions from \(k=1\) to \(T\), the undiscounted sum telescopes:
-
-$$
-\sum_{k=1}^{T}r_{\mathrm{prog},k}
-=
-15(d_0-d_T).
-$$
-
-This identity shows that the undiscounted progress contribution depends on the initial and final distances rather than the intermediate path alone. The progress reward is potential-difference shaping with an effective undiscounted formulation; strict policy-invariance claims for discounted potential-based shaping require the corresponding discount factor and terminal-state treatment.
-
-The attitude penalty applies only to roll and pitch. Yaw is not directly penalized because the mission does not prescribe a preferred heading.
-
-The reward weights are manually specified. Their effectiveness has not been established through a documented ablation study or automated optimization procedure.
-
----
-
-## 7. Obstacle Sensing Model
-
-### 7.1 Eight-Ray Virtual Range Finder
-
-The drone uses eight ray directions defined in its body coordinate system, with \(+X\) forward, \(+Y\) left, and \(+Z\) upward.
-
-Let
-
-$$
-c=\frac{1}{\sqrt{2}}.
-$$
-
-The unit ray directions are
-
-$$
-\begin{aligned}
-\hat d_0&=(1,0,0) && \text{Front},\\
-\hat d_1&=(-1,0,0) && \text{Back},\\
-\hat d_2&=(0,1,0) && \text{Left},\\
-\hat d_3&=(0,-1,0) && \text{Right},\\
-\hat d_4&=(0,0,1) && \text{Up},\\
-\hat d_5&=(0,0,-1) && \text{Down},\\
-\hat d_6&=(c,c,0) && \text{Front-left},\\
-\hat d_7&=(c,-c,0) && \text{Front-right}.
-\end{aligned}
-$$
-
-### 7.2 Ray Geometry
-
-Let \(R(\Theta)\in SO(3)\) be the rotation matrix mapping body-frame directions into world coordinates. Each ray is cast from an offset origin.
-
-The ray start and endpoint are
-
-$$
-q_i^+=p+r_{\mathrm{off}}R\hat d_i,
-$$
-
-$$
-q_i^\times=p+d_{\max}R\hat d_i,
-$$
-
-where
-
-$$
-r_{\mathrm{off}}=0.35\ \mathrm{m},
-\qquad
-d_{\max}=5.0\ \mathrm{m}.
-$$
-
-The PyBullet ray-test operation returns a segment fraction \(f_i\in[0,1]\). The observation stores this normalized fraction:
-
-$$
-\rho_i=f_i.
-$$
-
-The environment converts the fraction into an approximate distance:
-
-$$
-\tilde d_i=5f_i,
-\qquad
-d_{\min}=\min_{i\in\{0,\ldots,7\}}\tilde d_i.
-$$
-
-A ray that detects no obstacle returns \(f_i=1\), corresponding to the maximum reported distance of \(5.0\ \mathrm{m}\).
-
-### 7.3 Conservative Distance Approximation
-
-Because each ray starts \(0.35\ \mathrm{m}\) away from the body origin, the true surface distance measured along the ray is
-
-$$
-d_i^{\mathrm{true}}
-=
-r_{\mathrm{off}}
-+
-(d_{\max}-r_{\mathrm{off}})f_i
-=
-0.35+4.65f_i.
-$$
-
-The difference between the true distance and the environment's linear approximation is
-
-$$
-\begin{aligned}
-\delta_i
-&=d_i^{\mathrm{true}}-\tilde d_i\\
-&=0.35(1-f_i).
-\end{aligned}
-$$
-
-Therefore,
-
-$$
-0\leq\delta_i\leq0.35\ \mathrm{m}.
-$$
-
-The approximation does not over-report clearance under the documented ray geometry. It is exact at the range cap and underestimates the ray distance by at most \(0.35\ \mathrm{m}\) near contact.
-
-The sensing system is a fixed-range proximity model rather than a persistent mapping or localization system.
-
----
-
-## 8. Initial-State Distribution and Environment Reset
-
-### 8.1 Nominal Start and Goal
-
-The nominal initial position and goal position are
-
-$$
-p_0=(-4.0,0.0,2.0)\ \mathrm{m},
-$$
-
-$$
-p_g=(4.5,0.0,2.0)\ \mathrm{m}.
-$$
-
-The nominal initial-to-goal displacement is \(8.5\ \mathrm{m}\) along the world \(X\)-axis.
-
-### 8.2 Optional Initial-Position Randomization
-
-When reset is called with `options={"random_start": True}`, the initial position is sampled from a uniform distribution around the nominal spawn position:
-
-$$
-p_0
-\sim
-\bar p_0+
-\mathcal U
-\left(
-\begin{bmatrix}
--0.5\\-0.5\\-0.2
-\end{bmatrix},
-\begin{bmatrix}
-0.5\\0.5\\0.2
-\end{bmatrix}
-\right),
-$$
-
-where \(\bar p_0=(-4.0,0.0,2.0)\ \mathrm{m}\).
-
-The initial attitude is reset to
-
-$$
-\eta_0=(0,0,0).
-$$
-
-Five settling physics ticks are executed before the first observation is returned. This allows initial contact conditions to resolve before interaction begins.
-
-### 8.3 Randomness and Obstacles
-
-The environment follows Gymnasium's seeded reset mechanism. The seed initializes the environment's NumPy random generator, which is also used by the obstacle manager for randomized layouts.
-
-The default configuration uses a static reference obstacle layout. Obstacle randomization can be enabled through the environment configuration using `randomize_obstacles=True` and `num_random_obstacles=3`.
-
----
-
-## 9. Episode Termination and Truncation
-
-### 9.1 Permitted Flight Region
-
-The permitted flight region is
-
-$$
-\mathcal B
-=
-[-7,7]\times[-4,4]\times(0.12,5.0]\ \mathrm{m}.
-$$
-
-The lower altitude threshold is
-
-$$
-z_{\min}=0.12\ \mathrm{m}.
-$$
-
-### 9.2 Termination Conditions
-
-An episode terminates when the target is reached or a physical or geometric failure condition occurs:
-
-$$
-\begin{aligned}
-\mathrm{terminated}_k
-=
-\mathbb{1}\big[
-&d_k<0.40\\
-&\lor\ C_{\mathrm{obs}}\neq\varnothing\\
-&\lor\ z\leq z_{\min}\\
-&\lor\ C_{\mathrm{plane}}\neq\varnothing\\
-&\lor\ p\notin\mathcal B\\
-&\lor\ \max(|\phi|,|\theta|)>1.3
-\big].
-\end{aligned}
-$$
-
-Here, \(C_{\mathrm{obs}}\) denotes obstacle contacts detected by the physics engine, while \(C_{\mathrm{plane}}\) denotes ground-plane contact.
-
-Obstacle collisions are identified using actual PyBullet contact reports filtered to obstacle bodies managed by the obstacle manager. They are not inferred solely from a distance threshold.
-
-The excessive-tilt threshold is
-
-$$
-1.3\ \mathrm{rad}\approx74.5^\circ.
-$$
-
-### 9.3 Time-Limit Truncation
-
-If the maximum horizon is reached without a terminal event, the episode is truncated:
-
-$$
-\mathrm{truncated}_k
-=
-\mathbb{1}
-\left[
-k\geq k_{\max}
-\land
-\neg\mathrm{terminated}_k
-\right].
-$$
-
-This distinction follows the Gymnasium API: goal attainment and physical failures are terminal events, whereas reaching the time limit is a truncation. Preserving the distinction is important for reinforcement learning algorithms that bootstrap value estimates.
-
----
-
-## 10. ACMFDS Contextual Decision System
-
-### 10.1 Role Within the Environment
-
-The Adaptive Contextual Multi-Functional Decision System (ACMFDS) is invoked during environment steps to populate the diagnostic `info` dictionary.
-
-The recorded information includes
-
-$$
-\texttt{info}
-\supseteq
-\left\{
-\texttt{acmfds\_context},
-\texttt{acmfds\_decision},
-\texttt{acmfds\_reason}
-\right\}.
-$$
-
-Within `DroneEnv`, ACMFDS acts as an **explainability and telemetry layer**. Its decision output does not replace the reinforcement learning policy's action. The policy action remains responsible for driving the simulated physics.
-
-The mission execution path uses ACMFDS differently: its decision can override mission motion through a veto mechanism. Results from the two execution paths should therefore not be interpreted as interchangeable.
-
-### 10.2 Context Classification
-
-The contextual decision system applies the following documented priority rules:
-
-$$
-\mathrm{context}=
-\begin{cases}
-\mathrm{EMERGENCY},
-&
-\mathrm{SoC}\leq5\%
-\lor \mathrm{tilt}>0.55
-\lor z<0.25,\\
-\mathrm{OBSTACLE\_CRITICAL},
-&
-d_{\min}<0.8\ \mathrm{m},\\
-\mathrm{OBSTACLE\_NEAR},
-&
-d_{\min}<1.5\ \mathrm{m},\\
-\mathrm{LOW\_BATTERY},
-&
-\mathrm{SoC}\leq30\%,\\
-\mathrm{STRONG\_WIND},
-&
-\|v_{\mathrm{wind}}\|\geq4.0\ \mathrm{m/s},\\
-\mathrm{LANDING/MISSION\_COMPLETE},
-&
-d_g\leq0.4\ \mathrm{m},\\
-\mathrm{NORMAL},
-&
-\text{otherwise}.
-\end{cases}
-$$
-
-The first matching rule determines the context. Consequently, higher-priority emergency conditions take precedence over lower-priority classifications.
-
-### 10.3 Context-Dependent Objective Weights
-
-ACMFDS assigns weights to four objectives:
-
-- \(w_{\mathrm{safe}}\): safety.
-- \(w_{\mathrm{energy}}\): energy efficiency.
-- \(w_{\mathrm{clear}}\): obstacle clearance.
-- \(w_{\mathrm{prog}}\): mission progress.
-
-The weights satisfy
-
-$$
-w_{\mathrm{safe}}
-+w_{\mathrm{energy}}
-+w_{\mathrm{clear}}
-+w_{\mathrm{prog}}
-=1.
-$$
-
-Two documented examples are
-
-$$
-\mathbf w_{\mathrm{NORMAL}}
-=
-(0.25,0.20,0.20,0.35),
-$$
-
-and
-
-$$
-\mathbf w_{\mathrm{EMERGENCY}}
-=
-(0.75,0.10,0.10,0.05).
-$$
-
-The emergency configuration assigns \(75\%\) of the total objective weight to safety and reduces the mission-progress weight to \(5\%\). This represents the system's intended priority structure:
-
-$$
-\text{Safety}
->
-\text{Energy Efficiency}
->
-\text{Mission Progress}.
-$$
-
-The weights describe objective priorities; they should not be interpreted as probabilities or as a guarantee of safe flight.
-
-### 10.4 Integration Limitations
-
-The following restrictions apply specifically to the `DroneEnv` integration:
-
-1. **No direct actuation authority:** ACMFDS output is diagnostic information; the RL policy controls the vehicle.
-2. **Reduced directional information:** `clearance_front`, `clearance_left`, and `clearance_right` are all assigned the scalar \(d_{\min}\). Therefore, this environment path cannot distinguish leftward from rightward detours using those fields.
-3. **Missing wind and battery inputs:** The constructed `FlightState` does not supply battery or wind fields. Consequently, the `LOW_BATTERY` and `STRONG_WIND` contexts cannot be triggered through their respective thresholds in this path.
-4. **Different mission integration:** The main mission runner uses directional clearances and ACMFDS veto behaviour. Its capabilities must be evaluated separately from the Gymnasium interface.
-
----
-
-## 11. Gymnasium API and Rendering
-
-The environment implements the standard Gymnasium interaction interface.
-
-### 11.1 Reset Interface
-
-The reset method returns the initial observation and an information dictionary:
-
-$$
-(o_0,\mathrm{info}_0)
-=
-\mathrm{reset}(\mathrm{seed},\mathrm{options}).
-$$
-
-The optional seed and reset options support reproducible initialization and configurable start conditions.
-
-### 11.2 Step Interface
-
-Each control step returns a five-element tuple:
-
-$$
-(o_{k+1},r_k,
-\mathrm{terminated}_k,
-\mathrm{truncated}_k,
-\mathrm{info}_k).
-$$
-
-The action and observation spaces use `gymnasium.spaces.Box` with `float32` values and matching dimensions.
-
-### 11.3 Rendering
-
-The environment declares the following rendering metadata:
-
-- Supported modes: `human` and `rgb_array`.
-- Nominal rendering frequency: \(60\ \mathrm{FPS}\).
-
-In `rgb_array` mode, the offscreen PyBullet camera returns an image with shape
-
-$$
-I\in\{0,\ldots,255\}^{320\times320\times3}.
-$$
-
-The image uses an unsigned 8-bit integer representation. In `human` mode, the visual scene is updated and the debug camera tracks the vehicle.
-
-The `close()` method disconnects the physics client and resets the client identifier, supporting repeated cleanup calls.
-
----
-
-## 12. Installation and Reproducibility
-
-### 12.1 Prerequisites
-
-Use a compatible Python environment with the project's runtime dependencies installed. The optional reinforcement learning stack is specified separately in `requirements-rl.txt`.
-
-### 12.2 Environment Validation
-
-Run the environment test suite:
+Install the core dependencies:
 
 ```bash
-python test_env.py
+pip install -r requirements.txt
 ```
 
-The documented test suite includes Gymnasium's `check_env` compliance validation.
+Core dependencies include PyBullet, NumPy, scikit-learn, joblib, FastAPI, Uvicorn, and WebSockets.
 
-### 12.3 Install Optional Reinforcement Learning Dependencies
+---
 
-```bash
-pip install -r requirements-rl.txt
-```
+## 4. Running the Project
 
-This optional dependency file includes the PyTorch and Stable-Baselines3 components used by the RL training path.
-
-### 12.4 Train a Reinforcement Learning Policy
-
-The project provides a training entry point supporting PPO and SAC:
-
-```bash
-python train.py --algo ppo --timesteps 50000
-```
-
-The documented algorithm options are lowercase `ppo` and `sac`.
-
-Training results depend on the algorithm configuration, random seed, environment settings, and optimization parameters. The command above specifies a training budget; it does not imply a particular success rate or performance guarantee.
-
-### 12.5 Run the Default Mission Pipeline
+### Standard Simulation
 
 ```bash
 python main.py
 ```
 
-This command runs the default ACMFDS mission pipeline rather than the Gymnasium RL environment. The distinction should be maintained when reporting experimental results.
+### Headless Simulation
 
-### 12.6 Reproducibility Considerations
+```bash
+python main.py --headless
+```
 
-For reproducible experiments, record at least:
+### Individual Scenarios
 
-- Python and dependency versions.
-- The algorithm and training timestep budget.
-- The random seed.
-- Obstacle randomization settings.
-- Reward parameters and environment configuration.
-- Evaluation protocol and success criteria.
-- Whether the results were obtained from the mission runner or the RL environment.
+```bash
+python main.py --scenario obstacle
+python main.py --scenario low-battery
+python main.py --scenario strong-wind
+python main.py --scenario combined
+python main.py --scenario moving-obstacles
+python main.py --list-scenarios
+```
+
+### Multiple Episodes
+
+```bash
+python main.py --headless --episodes 3 --seed 7 --output results/run.csv
+```
+
+### Evaluate Multiple Runs
+
+```bash
+python evaluate.py --scenario obstacle --episodes 5
+```
+
+### Manual Keyboard Mode
+
+```bash
+python main.py --mode manual
+```
+
+Manual keyboard control is a legacy mode.
+
+### Integrated Dashboard
+
+Start the dashboard with:
+
+```bash
+python -m dashboard.server
+```
+
+Then open:
+
+**http://127.0.0.1:8000**
+
+On Windows, use the Python executable from the configured project environment if necessary:
+
+```cmd
+"C:\Users\jovika\anaconda3\envs\pybullet\python.exe" -m dashboard.server
+```
+
+To view the native PyBullet window for the same flight, enable **Native PyBullet window** in Run Control before starting the mission.
+
+### Flight Logs
+
+Each run writes a per-step CSV file, typically:
+
+```text
+results/acmfds_log_<scenario>_<episode>.csv
+```
+
+The output records include:
+
+- Position, altitude, velocity, and orientation.
+- Mission phase and goal distance.
+- Obstacle distances and directional clearances.
+- Battery and wind values.
+- ACMFDS context, decision, and reason.
+- Candidate evaluations and selected direction.
+- Movement action and executed command.
+- Thrust, collisions, and mission status.
+
+A summary reports the outcome, duration, minimum obstacle distance, altitude errors, battery consumption, decision distribution, and emergency/safe-landing counts.
+
+### Live Dashboard Features
+
+The dashboard is implemented with FastAPI, WebSockets, HTML, CSS, and JavaScript.
+
+**One authoritative simulation loop:** The PyBullet mission runs on the server. The browser receives read-only telemetry snapshots. Refreshing the browser does not advance the physics simulation, and duplicate mission starts are rejected while a flight is active.
+
+**Synchronized outputs:** The native PyBullet window, browser 3D view, graphs, and CSV log use data from the same flight.
+
+**3D visualization:** The browser draws the actual logged drone pose and the spawned obstacle geometry. Moving obstacles use positions from logged simulation rows. The browser view is a visualization, not a separate physics engine.
+
+**Telemetry and graphs:** The dashboard displays altitude, target altitude, trajectory, velocity, obstacle distance, wind, battery, and the decision timeline.
+
+**Explainable decision panel:** The interface shows the ACMFDS context, decision, triggering reason, candidate clearances, accepted/rejected verdicts, movement action, and executed command.
+
+**Pause, resume, stop, and reset:** These controls act on the authoritative simulation. Pause freezes the flight at a safe step boundary; resume continues the same episode. Stop is distinct from pause.
+
+**Validated configuration:** The server validates scenario, target altitude, goal coordinates, cruise speed, battery charge, wind configuration, and moving-obstacle settings.
 
 ---
 
-## 13. Known Limitations
+## 5. Automated Testing
 
-The environment has several documented limitations that affect the interpretation of experimental results.
+Run the test suite:
 
-### 13.1 Reward Calibration
+```bash
+python test_env.py
+```
 
-The reward weights are manually calibrated. No documented ablation study isolates the contribution of individual reward components, and the weights have not been established through a reported optimization procedure.
+The test suite covers the following areas:
 
-### 13.2 Three-Dimensional Goal Criterion
+- Gymnasium API compliance and reset/step contracts.
+- Drone physics and hover behaviour.
+- FlightState validation and per-field source tags.
+- ACMFDS decision rules and explainable outputs.
+- Battery bounds and workload-based consumption.
+- Wind reproducibility and drag-force calculations.
+- Mission phase progression.
+- Decision-to-command and actuation limits.
+- Sequential accuracy of the learned feedforward controller.
+- Ray sensing against known obstacle geometry.
+- Orientation-transformed visual-part positions.
+- Per-step CSV logging.
+- Reproducibility of moving obstacles.
+- Dashboard API validation.
+- Simulated GPS conversion and origin gating.
+- Telemetry integrity and decision explanations.
+- Obstacle-clearance margins and event counting.
+- Speed-planning limits and braking behaviour.
+- Pause/resume semantics and battery-model consistency.
+- A guard against reinforcement-learning imports in the default application path.
 
-Goal arrival is defined by a spherical distance threshold:
+### Reported Test Count
 
-$$
-\|p-p_g\|_2<0.40\ \mathrm{m}.
-$$
+The supplied project revision documents **62 automated tests**.
 
-The criterion does not independently constrain altitude at arrival. A state at an unintended altitude may satisfy the goal test if it lies inside the target sphere, subject to the other terminal conditions.
-
-### 13.3 Different Drag Models
-
-The rigid-body dynamics use linear drag:
-
-$$
-F_{\mathrm{drag}}=-c_vv.
-$$
-
-The separate wind subsystem uses a quadratic relative-velocity drag expression:
-
-$$
-F_{\mathrm{wind}}
-=
-\frac{1}{2}\rho C_d A
-\|v_{\mathrm{rel}}\|^2
-\hat v_{\mathrm{rel}},
-$$
-
-where \(\rho\) denotes fluid density, \(C_d\) is the drag coefficient, \(A\) is reference area, and \(\hat v_{\mathrm{rel}}\) is the relative-velocity direction, subject to the implementation's force-sign convention. These equations represent different model components and should not be treated as a single drag law.
-
-### 13.4 Limited Range Sensing
-
-The sensor configuration consists of eight fixed rays with a maximum range of \(5\ \mathrm{m}\). It does not provide persistent mapping, environmental memory, or observations beyond the sensing range.
-
-The minimum distance \(d_{\min}\) is calculated over all eight rays, including the backward and downward directions. This differs from the mission runner's use of a three-ray forward cone.
-
-### 13.5 Control Frequency
-
-The two physics substeps per control step establish a nominal \(60\ \mathrm{Hz}\) control rate. A policy cannot issue independent control updates faster than this rate through the current interface. Changing the substep configuration also changes the simulated duration represented by each environment step.
-
-### 13.6 Reinforcement Learning Validation Scope
-
-The RL environment is an optional experimental interface. The default mission pipeline and the Gymnasium training path are separate execution routes. Pretrained models retained under `../models/` are not used by the default mission pipeline.
-
-Accordingly, results from the RL environment should be reported separately from results obtained using the default ACMFDS mission runner.
+Always run the current `test_env.py` before reporting the final test count. Report the actual result from the current project rather than assuming that an earlier test count still applies.
 
 ---
 
-## 14. Conclusion
+## 6. Flight State: Physical, Sensor, and Modeled Data
 
-This project provides a physics-based simulation environment for investigating continuous-control quadcopter navigation with PyBullet and Gymnasium. Its mathematical specification includes rigid-body dynamics, bounded thrust and torque commands, a 27-dimensional observation vector, goal-directed reward shaping, an eight-ray obstacle-sensing model, and explicit termination and truncation conditions.
+Each field in `state/flight_state.py` carries a source tag through `state.source_of(field)`.
 
-The ACMFDS integration adds contextual classification and interpretable objective weighting. Within `DroneEnv`, this functionality remains a diagnostic layer rather than an alternative actuator controller. The distinction between this environment and the default mission pipeline is essential for accurate experimental interpretation.
+| Source | Examples | Meaning |
+|---|---|---|
+| `SIMULATION` | Position, altitude, velocities, roll, pitch, yaw, target position | Derived from PyBullet's simulated state |
+| `SENSOR` | Obstacle distance, front/left/right clearance | Obtained from simulated ray sensing |
+| `MODELED` | Battery percentage, wind speed, wind direction | Calculated by modeled subsystems, not physical sensors |
 
-The implementation supports environment validation and optional PPO- or SAC-based policy training. Nevertheless, reward calibration, limited sensing, simplified aerodynamic modelling, and the separation between the mission and RL paths should be considered when designing experiments or drawing conclusions about autonomous flight performance.
+`StateValidator.sanitize()` clamps invalid values, normalizes the wind direction vector, and records corrections in `state.issues`.
 
-## 15. References and Technical Resources
+This separation helps prevent modeled values from being misrepresented as physical sensor measurements.
 
-1. Gymnasium documentation: https://gymnasium.farama.org/
-2. PyBullet repository: https://github.com/bulletphysics/bullet3
-3. Stable-Baselines3 documentation: https://stable-baselines3.readthedocs.io/
-4. Sutton, R. S., and Barto, A. G. *Reinforcement Learning: An Introduction*, 2nd edition, MIT Press, 2018.
+---
 
-## 16. Project Structure
+## 7. Reproducible Test Scenarios
 
-The documented implementation refers to the following core files and modules:
+The project contains six configured scenarios. Each scenario defines its environment and initial conditions while ACMFDS uses its documented default thresholds.
 
-| File or module | Role |
+| Scenario | Conditions | Purpose |
+|---|---|---|
+| A: `normal` | Low wind, adequate battery, no obstacle directly blocking the planned route | Full mission sequence |
+| B: `obstacle` | Two static pillars near the planned route | Sensing and obstacle avoidance |
+| C: `low-battery` | Initial battery charge of 32%, with a side obstacle | Energy conservation and safe landing |
+| D: `strong-wind` | 4.5 m/s base crosswind, gusts, and a downwind obstacle | Wind response |
+| E: `combined` | 28% initial charge, an obstacle, and active wind | Safety priority under competing conditions |
+| F: `moving-obstacles` | Two static pillars and two moving obstacles | Dynamic obstacle avoidance |
+
+The standard start position is:
+
+$$
+(X_s,Y_s)=(-4.0,0.0)\ \text{m}
+$$
+
+The default target position is:
+
+$$
+(X_g,Y_g)=(4.5,0.0)\ \text{m}
+$$
+
+The default cruise altitude is 2.0 m.
+
+The default horizontal goal distance from the start is:
+
+$$
+d=\sqrt{(X_g-X_s)^2+(Y_g-Y_s)^2}=8.5\ \text{m}
+$$
+
+The scenarios change the environment and initial conditions rather than deliberately changing ACMFDS thresholds between tests.
+
+### Obstacle Safety Margin
+
+The documented default detour gate is:
+
+$$
+d_{\mathrm{gate}} =
+d_{\mathrm{critical}} + d_{\mathrm{safety\ margin}}
+= 1.1\ \text{m}
+$$
+
+A candidate detour side must pass the relevant clearance check before it is accepted.
+
+After an avoidance maneuver, a cooldown interval maintains cautious speed. The maneuver tracker checks actual sensor readings and does not automatically mark every non-collision maneuver as successful.
+
+Moving obstacles follow deterministic analytic trajectories and are updated in the physics simulation at each step.
+
+---
+
+## 8. Reported Headless Scenario Results
+
+The supplied project report records a set of headless runs using seed 123.
+
+| Scenario | Outcome | Duration | Collisions | Minimum obstacle distance |
+|---|---|---:|---:|---:|
+| Normal | Landed | 16.3 s | 0 | 5.0 m |
+| Obstacle | Landed | 27.3 s | 0 | 0.56 m |
+| Low-battery | Landed | 25.3 s | 0 | 1.19 m |
+| Strong-wind | Landed | 20.6 s | 0 | 0.95 m |
+| Combined | Landed | 30.0 s | 0 | 0.80 m |
+| Moving-obstacles | Landed | 21.6 s | 0 | 0.77 m |
+
+These are reported observations from the specified runs, not universal safety guarantees. Re-run the scenarios before publication if you need to claim that these results were reproduced on the current revision.
+
+Example reproduction command:
+
+```bash
+python main.py --headless --scenario obstacle --seed 123
+```
+
+The project also reports a dashboard synchronization test in which the browser stream and CSV contained matching records for the same episode. Such a result should be reported as verified only for the run actually checked.
+
+---
+
+## 9. Limitations and Honest Engineering Notes
+
+### Reactive, Not Global Path Planning
+
+Obstacle avoidance is reactive and depends on forward-cone ray measurements. There is no global path planner in the described default decision path. A detour can therefore pass close to a secondary obstacle even without producing a collision.
+
+### Three-Ray Sensing
+
+The drone uses a three-ray forward cone. It does not have complete omnidirectional obstacle sensing and is blind behind and above within this sensing arrangement.
+
+### Simplified Wind Model
+
+The wind model uses assumed parameters, including air density, drag coefficient, and exposed area. These provide modeled disturbances rather than calibrated measurements of real aerodynamic behaviour. Gusts can still produce transient tracking errors.
+
+### Landing and Ground Effect
+
+Ground effect is not modeled. The landing gate is a control-side protection that reduces horizontal demand near touchdown; it is not a complete aerodynamic ground-effect model.
+
+### Learned Feedforward Model
+
+The learned feedforward controller is optional and altitude-only. The main actuation path uses SMC. The optional model is trained for inverse-dynamics feedforward prediction and is not required for the documented default mission results.
+
+### Moving Obstacles
+
+Moving obstacles are kinematic bodies following deterministic sinusoidal trajectories. They move through the simulation but are not pushed by the drone.
+
+### Simulated GPS
+
+The geographic map converts simulated world coordinates into approximate latitude and longitude around a configurable geographic origin. It uses a local flat-earth approximation suitable for the short distances of these scenarios.
+
+The geographic origin corresponds to world position `(X=0, Y=0)`. The default drone start is `(-4, 0)`, four metres west of that origin.
+
+The mapping is a visualization derived from logged PyBullet positions. It is **not a real GPS receiver or a real-world obstacle map**.
+
+If the browser supplies a device location with reported uncertainty, for example ±107 m, this affects the absolute geographic placement of the map. It does not change the relative obstacle geometry measured inside the simulation.
+
+### GPS Waypoint Navigation
+
+GPS waypoint navigation is not implemented in the described revision. The simulated GPS and geographic obstacle map are display and verification features. The navigation goal remains in local world coordinates, and ACMFDS decisions are unchanged by the GPS origin.
+
+Browser geolocation is optional and is not required to run the simulation.
+
+### No Physical GPS Telemetry
+
+No physical drone GPS telemetry source is connected. The interface must not represent simulated GPS or operator device location as the physical drone's measured GPS position.
+
+### Safety Claims
+
+Zero recorded collisions in a scenario means that no collisions were recorded in that run. It does not prove universal safety in every obstacle layout, wind condition, initial state, or real-world flight.
+
+---
+
+## 10. Project Structure
+
+```text
+drone_simulation_project/
+├── main.py
+├── legacy_modes.py
+├── evaluate.py
+├── scenarios.py
+├── README.md
+├── requirements.txt
+├── requirements-rl.txt
+│
+├── state/
+│   └── flight_state.py
+│
+├── decision/
+│   └── acmfds.py
+│
+├── controllers/
+│   ├── actuation.py
+│   └── data_driven_controller.py
+│
+├── simulation/
+│   ├── acmfds_mission.py
+│   ├── mission.py
+│   ├── pybullet_sim.py
+│   ├── drone.py
+│   ├── obstacles.py
+│   ├── battery.py
+│   └── wind.py
+│
+├── telemetry/
+│   ├── gps.py
+│   └── logger.py
+│
+├── dashboard/
+│   ├── server.py
+│   └── static/
+│       ├── index.html
+│       ├── app.js
+│       └── style.css
+│
+├── trajectory/
+│   └── interpolation.py
+│
+├── models/
+│   ├── data_driven_controller.pkl
+│   └── obstacle_avoidance_model.pkl
+│
+├── results/
+│   └── acmfds_log_<scenario>_<episode>.csv
+│
+└── test_env.py
+```
+
+The exact files present may vary by repository revision. Optional learned models and legacy components are not required to claim that the default ACMFDS path is a rule-based, no-RL decision system.
+
+---
+
+## 11. ACMFDS Objectives and Contexts
+
+ACMFDS evaluates four objectives:
+
+| Objective | Purpose |
 |---|---|
-| `drone_env.py` | Gymnasium environment, state construction, reward calculation, termination, and rendering |
-| `drone.py` | Quadcopter model, actuation, drag, and ray sensing |
-| `train.py` | Optional reinforcement learning training entry point |
-| `test_env.py` | Environment validation and API compliance tests |
-| `main.py` | Default mission execution entry point |
-| `../decision/acmfds.py` | ACMFDS contextual decision logic |
-| `../simulation/acmfds_mission.py` | Default ACMFDS mission pipeline |
-| `requirements-rl.txt` | Optional reinforcement learning dependencies |
+| `SAFETY` | Maintain safety-related limits and respond to critical conditions |
+| `ENERGY_EFFICIENCY` | Moderate motion according to available battery energy |
+| `OBSTACLE_CLEARANCE` | Evaluate obstacle proximity and detour options |
+| `MISSION_PROGRESS` | Encourage movement toward the configured destination |
 
-*Note:* The relative paths above reflect the directory relationships in the supplied technical specification. Adjust them if the repository's published directory structure differs.
+The relative weights change according to the active flight context. The supplied tests check that the configured context weights sum to one.
+
+The documented contexts include:
+
+- `NORMAL`
+- `OBSTACLE_NEAR`
+- `OBSTACLE_CRITICAL`
+- `LOW_BATTERY`
+- `STRONG_WIND`
+- `LANDING`
+- `EMERGENCY`
+- `MISSION_COMPLETE`
+
+Each decision includes a human-readable reason, constraints, objective weights, and a `FlightCommand`.
+
+Candidate evaluations can describe whether LEFT, RIGHT, FORWARD, or CLIMB is accepted or rejected. This allows the decision process to be examined using the dashboard and CSV output rather than treated as a black box.
+
+The project's central contribution is an **explainable multi-objective flight-decision layer operating over a physics-based simulation**, supported by logged evidence and reproducible scenario tests.
 
 ---
 
-**Disclaimer:** This README documents the supplied simulation and interface specification. It does not claim real-world flight validation, experimentally measured aerodynamic fidelity, or guaranteed collision-free navigation.
+## License and Contributions
+
+Add the applicable license, authorship, and contribution information for your repository before public release.
