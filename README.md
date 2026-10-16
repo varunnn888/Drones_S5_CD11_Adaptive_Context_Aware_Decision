@@ -1,4 +1,4 @@
-# Adaptive Multi-Objective Flight Decision Algorithm for Autonomous Quadcopters
+# Adaptive Context Aware Decision
 
 A physics-based six-degree-of-freedom (6-DOF) quadcopter simulation built with **Python 3.10+ and PyBullet**. The project centers on ACMFDS, an explainable, rule-based, multi-objective flight decision system.
 
