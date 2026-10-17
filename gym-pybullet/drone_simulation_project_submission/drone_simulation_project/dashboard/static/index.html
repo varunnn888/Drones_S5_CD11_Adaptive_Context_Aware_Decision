@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACMFDS Live Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="logo"></span>
+    <div>
+      <h1>ACMFDS Live Dashboard</h1>
+      <p>Adaptive Context-Aware Multi-Objective Flight Decision System — live PyBullet simulation telemetry</p>
+    </div>
+  </div>
+  <div class="status-wrap">
+    <span class="dot offline" id="conn" title="telemetry stream"></span>
+    <span class="pill idle" id="statusPill">IDLE</span>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <section class="card">
+      <h2>Run Control</h2>
+      <div class="btn-row">
+        <button id="btnStart" class="primary">Start</button>
+        <button id="btnPause">Pause</button>
+        <button id="btnResume">Resume</button>
+        <button id="btnStop" class="danger">Stop</button>
+        <button id="btnReset">Reset</button>
+      </div>
+      <label class="check"><input type="checkbox" id="cfgMoving" checked> Dynamic obstacles enabled</label>
+      <label class="check"><input type="checkbox" id="cfgNativeWindow"> Native PyBullet window (same flight, host screen)</label>
+      <p class="hint">The toggle applies to the <em>actual</em> simulation: while disabled the moving boxes hold their current position and stop sweeping.</p>
+    </section>
+
+    <section class="card">
+      <h2>Flight Configuration</h2>
+      <label class="field">Scenario
+        <select id="cfgScenario"></select>
+      </label>
+      <p class="hint" id="scenarioDesc"></p>
+      <div class="grid2">
+        <label class="field">Target altitude (m)
+          <input type="number" id="cfgAlt" value="2.0" min="0.5" max="4.5" step="0.1"></label>
+        <label class="field">Cruise speed (m/s)
+          <input type="number" id="cfgSpeed" value="1.2" min="0.2" max="1.5" step="0.05"></label>
+        <label class="field">Goal X (m)
+          <input type="number" id="cfgGoalX" value="4.5" min="-7" max="7" step="0.1"></label>
+        <label class="field">Goal Y (m)
+          <input type="number" id="cfgGoalY" value="0.0" min="-4.5" max="4.5" step="0.1"></label>
+        <label class="field">Initial battery (%)
+          <input type="number" id="cfgBattery" value="100" min="5" max="100" step="1"></label>
+        <label class="field">Wind speed (m/s)
+          <input type="number" id="cfgWind" value="0.5" min="0" max="8" step="0.1"></label>
+        <label class="field">Wind dir (deg, CCW from +X)
+          <input type="number" id="cfgWindDir" value="0" min="-360" max="360" step="5"></label>
+        <label class="check"><input type="checkbox" id="cfgWindOn" checked> Wind enabled</label>
+      </div>
+      <p class="hint">Validated server-side, applied to the next started run. Only environment/initial conditions change — ACMFDS thresholds stay at documented defaults.</p>
+      <p class="error" id="cfgError"></p>
+    </section>
+
+    <section class="card">
+      <h2>Episode Summary</h2>
+      <div class="summary" id="summary">no completed run yet</div>
+    </section>
+
+    <section class="card">
+      <h2>Simulated GPS <span class="dimtag">modeled</span></h2>
+      <label class="check"><input type="checkbox" id="gpsOn"> Enable simulated GPS</label>
+      <div class="grid2">
+        <label class="field">Origin latitude
+          <input type="number" id="gpsRefLat" value="" min="-90" max="90" step="0.0001" placeholder="not set"></label>
+        <label class="field">Origin longitude
+          <input type="number" id="gpsRefLon" value="" min="-180" max="180" step="0.0001" placeholder="not set"></label>
+      </div>
+      <div class="btn-row gps-btns">
+        <button id="btnGpsApply">Set origin from fields</button>
+        <button id="btnMyLocation">Use current device location</button>
+        <button id="btnDeviceAsRef" disabled>Use device fix as origin</button>
+        <button id="btnTrack">Track device continuously</button>
+        <button id="btnStopTrack" class="danger" style="display:none">Stop tracking</button>
+      </div>
+      <p class="hint" id="gpsNote">Drone GPS below is SIMULATED: derived from local X/Y metres around the geographic origin, never a real fix. The device-location button asks the browser for permission only when clicked and only <em>displays</em> the operator's own coordinates — it never moves the drone or changes its physics.</p>
+      <div class="summary" id="deviceLoc">DEVICE LOCATION: not requested (click the button; browser will ask permission)</div>
+      <div class="summary" id="gpsValue">SIM GPS: Disabled</div>
+      <div class="summary" id="originInfo">GEOGRAPHIC ORIGIN: not set</div>
+      <div class="summary" id="realGps">Real drone GPS: Not connected</div>
+    </section>
+  </aside>
+
+  <section class="content">
+    <div class="card worldpanel" id="worldPanel">
+      <h2>Live telemetry — <span class="dimtag">simulated world coordinates (metres, sim frame)</span></h2>
+      <div class="worldgrid">
+        <span class="wv" id="wX">X --</span>
+        <span class="wv" id="wY">Y --</span>
+        <span class="wv" id="wZ">Z --</span>
+        <span class="wv" id="wYaw">heading --</span>
+        <span class="wv" id="wAtt">attitude --</span>
+        <span class="wv" id="wGoal">goal dist --</span>
+      </div>
+      <p class="hint">World-frame values from the PyBullet simulation itself. These are NOT the simulated GPS fix and NOT the operator device location.</p>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span class="lab">Phase</span><span class="val" id="tPhase">--</span></div>
+      <div class="tile"><span class="lab">Altitude</span><span class="val" id="tAlt">--</span></div>
+      <div class="tile"><span class="lab">Target alt</span><span class="val" id="tTgt">--</span></div>
+      <div class="tile"><span class="lab">Speed</span><span class="val" id="tSpeed">--</span></div>
+      <div class="tile"><span class="lab">Position</span><span class="val" id="tPos">--</span></div>
+      <div class="tile"><span class="lab">Obstacle dist</span><span class="val" id="tObst">--</span></div>
+      <div class="tile"><span class="lab">Battery</span><span class="val" id="tBatt">--</span></div>
+      <div class="tile"><span class="lab">Wind</span><span class="val" id="tWind">--</span></div>
+      <div class="tile"><span class="lab">Context</span><span class="val" id="tCtx">--</span></div>
+      <div class="tile"><span class="lab">Decision</span><span class="val" id="tDec">--</span></div>
+      <div class="tile"><span class="lab">Selected dir</span><span class="val" id="tDir">--</span></div>
+      <div class="tile"><span class="lab">Elapsed</span><span class="val" id="tTime">--</span></div>
+    </div>
+
+    <div class="card decision">
+      <h2>ACMFDS Decision (explainable)</h2>
+      <div class="decision-head">
+        <span class="badge" id="decCtx">--</span>
+        <span class="arrow">&rarr;</span>
+        <span class="badge" id="decDec">--</span>
+        <span class="badge dim" id="decDir">--</span>
+        <span class="outcome" id="outcome"></span>
+      </div>
+      <p class="reason" id="decReason">no decision yet</p>
+      <div class="cands" id="decCands"></div>
+      <p class="hint mono" id="cmdLine"></p>
+    </div>
+
+    <div class="charts">
+      <div class="card chart wide">
+        <h3>3D view — actual PyBullet state <span class="dimtag">visualization only</span></h3>
+        <canvas id="scene3d" height="300"></canvas>
+        <div class="legend" id="scene3dLegend"></div>
+      </div>
+      <div class="card chart wide">
+        <h3>SIMULATED GPS-REFERENCED OBSTACLE MAP <span class="dimtag">local schematic, not a real map</span></h3>
+        <canvas id="chGpsMap" height="300"></canvas>
+        <div class="legend" id="gpsMapLegend"></div>
+        <div class="summary" id="gpsMapInfo">Origin not set — set a geographic origin (device fix or manual) to enable the geographic map.</div>
+      </div>
+      <div class="card chart"><h3>Battery (%)</h3><canvas id="chBattery"></canvas><div class="summary" id="battDetail">battery: no flight yet — initial / current / consumed appear here</div></div>
+      <div class="card chart"><h3>Altitude vs target (m)</h3><canvas id="chAlt"></canvas><div class="legend" id="altLegend"></div></div>
+      <div class="card chart"><h3>Top-down trajectory X/Y (m)</h3><canvas id="chPath"></canvas><div class="legend" id="pathLegend"></div></div>
+      <div class="card chart"><h3>Velocity (m/s)</h3><canvas id="chVel"></canvas><div class="legend" id="velLegend"></div></div>
+      <div class="card chart"><h3>Obstacle distance (m)</h3><canvas id="chObst"></canvas><div class="legend" id="obstLegend"></div></div>
+      <div class="card chart"><h3>Wind speed (m/s)</h3><canvas id="chWind"></canvas></div>
+      <div class="card chart wide">
+        <h3>Decision timeline</h3>
+        <canvas id="chTimeline"></canvas>
+        <div class="legend" id="timelineLegend"></div>
+        <div class="tip" id="tlTip"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

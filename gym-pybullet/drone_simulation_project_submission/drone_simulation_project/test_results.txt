@@ -1,0 +1,67 @@
+pybullet build time: Aug 18 2026 15:40:24
+test_01_check_env (__main__.TestGymnasiumEnv) ... C:\Users\jovik\anaconda3\envs\pybullet\lib\site-packages\gymnasium\utils\env_checker.py:440: UserWarning: [33mWARN: Not able to test alternative render modes due to the environment not having a spec. Try instantiating the environment through `gymnasium.make`[0m
+  logger.warn(
+ok
+test_02_reset_and_step_contract (__main__.TestGymnasiumEnv) ... ok
+test_03_drone_physics_and_hover (__main__.TestGymnasiumEnv)
+Action [0,0,0,0] must map to hover thrust and hold altitude. ... ok
+test_derived_properties (__main__.TestFlightState) ... ok
+test_field_sources_cover_all_fields (__main__.TestFlightState) ... ok
+test_sanitize_clamps_and_reports (__main__.TestFlightState) ... ok
+test_context_weights_sum_to_one (__main__.TestACMFDSRules) ... ok
+test_critical_battery_safe_landing (__main__.TestACMFDSRules) ... ok
+test_ground_skim_climbs (__main__.TestACMFDSRules) ... ok
+test_low_battery_energy_conservation (__main__.TestACMFDSRules) ... ok
+test_mission_complete (__main__.TestACMFDSRules) ... ok
+test_normal_move_forward (__main__.TestACMFDSRules) ... ok
+test_obstacle_avoid_picks_clearer_side (__main__.TestACMFDSRules) ... ok
+test_obstacle_critical_retreats_toward_clear_side (__main__.TestACMFDSRules) ... ok
+test_obstacle_critical_wedged_climbs_never_descends (__main__.TestACMFDSRules) ... ok
+test_output_is_explainable (__main__.TestACMFDSRules) ... ok
+test_strong_wind_response (__main__.TestACMFDSRules) ... ok
+test_bounds_and_monotonicity (__main__.TestBatteryModel) ... ok
+test_configurable_thresholds (__main__.TestBatteryModel) ... ok
+test_force_conversion_documented (__main__.TestWindModel) ... ok
+test_relative_airspeed (__main__.TestWindModel) ... ok
+test_vector_reproducible (__main__.TestWindModel) ... ok
+test_full_phase_chain (__main__.TestMissionSequencer) ... ok
+test_command_to_action_bounds (__main__.TestActuationPath) ... ok
+test_landing_gate_levels_drone (__main__.TestActuationPath)
+Below the landing cutoff with a near-zero target: horizontal demand ... ok
+test_compute_control_dict_api (__main__.TestDataDrivenController) ... ok
+test_feedforward_contract_and_bounds (__main__.TestDataDrivenController)
+The learned model is a *feedforward inverse-dynamics* predictor: ... ok
+test_model_file_and_features (__main__.TestDataDrivenController) ... ok
+test_sequential_feedforward_accuracy (__main__.TestDataDrivenController)
+Closed-loop sequential use over a minimum-jerk maneuver window. ... ok
+test_forward_clearance_matches_geometry (__main__.TestRaySensorsVsKnownObstacle) ... ok
+test_offsets_rotate_with_yaw (__main__.TestVisualPartsFollowBody) ... ok
+test_csv_records_written (__main__.TestHeadlessMissionLogging) ... ok
+test_main_imports_no_stable_baselines (__main__.TestDefaultPathFreeOfRL) ... ok
+test_interpolation_and_stepping (__main__.TestWaypointNavigation) ... ok
+test_pretrained_model_loads (__main__.TestObstacleAvoidanceMLModel) ... C:\Users\jovik\anaconda3\envs\pybullet\lib\site-packages\sklearn\base.py:442: InconsistentVersionWarning: Trying to unpickle estimator DecisionTreeClassifier from version 1.9.0 when using version 1.7.2. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+C:\Users\jovik\anaconda3\envs\pybullet\lib\site-packages\sklearn\base.py:442: InconsistentVersionWarning: Trying to unpickle estimator RandomForestClassifier from version 1.9.0 when using version 1.7.2. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+ok
+test_accel_limit_and_cruise_cap (__main__.TestSpeedPlanner) ... ok
+test_braking_curve_and_decel_limit (__main__.TestSpeedPlanner) ... ok
+test_analytic_positions (__main__.TestMovingObstacleReproducibility) ... ok
+test_scenario_run_reproducible (__main__.TestMovingObstacleReproducibility) ... ok
+test_status_scenarios_and_validation (__main__.TestDashboardAPI) ... C:\Users\jovik\anaconda3\envs\pybullet\lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+ok
+test_api_gps_block_and_validation (__main__.TestSimulatedGps) ... ok
+test_reference_conversion_units (__main__.TestSimulatedGps) ... ok
+test_explanation_and_decision_columns (__main__.TestTelemetryIntegrity) ... ok
+test_rows_are_json_safe (__main__.TestTelemetryIntegrity) ... ok
+
+----------------------------------------------------------------------
+Ran 44 tests in 5.511s
+
+OK
+============================================================
+RUNNING DRONE SIMULATION TEST SUITE
+============================================================
