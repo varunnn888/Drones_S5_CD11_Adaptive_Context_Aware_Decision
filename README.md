@@ -1,4 +1,20 @@
-# Adaptive Context Aware Decision
+<p align="center">
+  <img src="logo-branding-amrita-universiy-2024.jpg" alt="Amrita Vishwa Vidyapeetham" width="900">
+</p>
+
+
+## Team Members
+
+| S. No. | Name | Roll Number | Email |
+|---|---|---|---|
+| 1 | Gaddam Deepika Reddy| cb.sc.u4aie24215 | cb.sc.u4aie24215@cb.students.amrita.edu |
+| 2 | Gade Varshini | cb.sc.u4aie24216 | cb.sc.u4aie24216@cb.students.amrita.edu |
+| 3 | Jovika N B| cb.sc.u4aie24223| cb.sc.u4aie24223@cb.students.amrita.edu |
+| 4 | P Poojitha | cb.sc.u4aie24237 | cb.sc.u4aie24237@cb.students.amrita.edu |
+| 5 | Potnuru Varun | cb.sc.u4aie24244 | cb.sc.u4aie24244@cb.students.amrita.edu |
+
+
+# Adaptive Context Aware Multi Objective Flight Decision Algorithm
 
 A physics-based six-degree-of-freedom (6-DOF) quadcopter simulation built with **Python 3.10+ and PyBullet**. The project centers on ACMFDS, an explainable, rule-based, multi-objective flight decision system.
 
