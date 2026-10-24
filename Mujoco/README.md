@@ -198,9 +198,9 @@ These are the described defaults; verify `config.py` if the local version has ch
 
 The initial direct distance between the default start and goal is:
 
-\[
-d=\sqrt{(12-0)^2+(10-0)^2+(2-2)^2}=\sqrt{244}\approx15.62\text{ m}
-\]
+$$
+d = \sqrt{(12 - 0)^2 + (10 - 0)^2 + (2 - 2)^2} = \sqrt{244} \approx 15.62\text{ m}
+$$
 
 ## 7. Obstacle model
 
