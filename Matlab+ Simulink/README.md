@@ -532,53 +532,30 @@ Several enhancements can be incorporated into the proposed framework.
 
 # References
 
-1. Base Research Paper (Provided for the Project)
+1. MathWorks. “MATLAB.” [https://www.mathworks.com/products/matlab.html](https://www.mathworks.com/products/matlab.html)
 
-2. MathWorks — MATLAB
+2. MathWorks. “Simulink.” [https://www.mathworks.com/products/simulink.html](https://www.mathworks.com/products/simulink.html)
 
-https://www.mathworks.com/products/matlab.html
+3. MathWorks. “Stateflow.” [https://www.mathworks.com/products/stateflow.html](https://www.mathworks.com/products/stateflow.html)
 
-3. MathWorks — Simulink
+4. LaValle, S. M. *Planning Algorithms*. Cambridge University Press, 2006. [https://planning.cs.uiuc.edu/](https://planning.cs.uiuc.edu/)
 
-https://www.mathworks.com/products/simulink.html
+5. Thrun, S., Burgard, W., and Fox, D. *Probabilistic Robotics*. MIT Press, 2005. [https://mitpress.mit.edu/9780262201629/probabilistic-robotics/](https://mitpress.mit.edu/9780262201629/probabilistic-robotics/)
 
-4. MathWorks — Stateflow
+6. Aggarwal, S., and Kumar, N. “Path planning techniques for unmanned aerial vehicles: A review, solutions, and challenges.” *Computer Communications*, vol. 149, pp. 270–299, 2020. [https://doi.org/10.1016/j.comcom.2019.10.014](https://doi.org/10.1016/j.comcom.2019.10.014)
 
-https://www.mathworks.com/products/stateflow.html
+7. Meng, W., Zhang, X., Zhou, L., Guo, H., and Hu, X. “Advances in UAV Path Planning: A Comprehensive Review of Methods, Challenges, and Future Directions.” *Drones*, vol. 9, no. 5, article 376, 2025. [https://doi.org/10.3390/drones9050376](https://doi.org/10.3390/drones9050376)
 
-5. LaValle, S. M.
-
-Planning Algorithms.
-
-https://planning.cs.uiuc.edu/
-
-6. Sebastian Thrun, Wolfram Burgard, Dieter Fox.
-
-Probabilistic Robotics.
-
-https://mitpress.mit.edu/9780262201629/probabilistic-robotics/
-
-7. Aggarwal, S., and Kumar, N. “Path planning techniques for unmanned aerial vehicles: A review, solutions, and challenges.” *Computer Communications*, vol. 149, pp. 270–299, 2020.
-
-https://doi.org/10.1016/j.comcom.2019.10.014
-
-8. Hu, X., et al. “Advances in UAV Path Planning: A Comprehensive Review of Methods, Challenges, and Future Directions.” *Drones*, vol. 9, no. 5, article 376, 2025.
-
-https://doi.org/10.3390/drones9050376
-
-9. Kumar, P., Pal, K., and Govil, M. C. “Comprehensive Review of Path Planning Techniques for Unmanned Aerial Vehicles (UAVs).” *ACM Computing Surveys*, vol. 58, no. 3, article 73, 2025.
-
-https://doi.org/10.1145/3737280
+8. Kumar, P., Pal, K., and Govil, M. C. “Comprehensive Review of Path Planning Techniques for Unmanned Aerial Vehicles (UAVs).” *ACM Computing Surveys*, vol. 58, no. 3, article 73, pp. 1–44, 2026. [https://doi.org/10.1145/3737280](https://doi.org/10.1145/3737280)
 
 ---
 
 # Repository Structure
 
-The structure below reflects the project folders and the contents of `Matlab+ Simulink/` visible in the supplied GitHub screenshot. Team-member folders are also present at the repository root; they are omitted from this project-folder view. The contents of `Matlab Simulation/` and `Mujoco/` are not expanded because their full file lists are not visible in the screenshot.
+The structure below reflects the folders and files visible in the supplied GitHub repository screenshot. Team-member folders are omitted from this compact overview. The contents of `Matlab Simulation/`, `Mujoco/`, and `gym-pybullet/` are not expanded here because their complete file lists are not shown in that screenshot.
 
 ```text
 Drones_S5_CD11_Adaptive_Context_Aware_Decision/
-├── README.md
 ├── Matlab Simulation/
 ├── Matlab+ Simulink/
 │   ├── ACMFDS_Stateflow.slx
@@ -595,7 +572,11 @@ Drones_S5_CD11_Adaptive_Context_Aware_Decision/
 │   ├── multiObstacleExperiment.m
 │   ├── multiObstaclePlanner.m
 │   └── obstacleCountExperiment.m
-└── Mujoco/
+├── Mujoco/
+├── gym-pybullet/
+├── ACMFDS_Project_Presentation.pptx
+├── FRP.md
+└── logo-branding-amrita-universiy-2024.jpg
 ```
 
 
@@ -649,4 +630,4 @@ obstacleCountExperiment
 
 # Acknowledgement
 
-The authors sincerely thank **Amrita Vishwa Vidyapeetham**, the Department of Artificial Intelligence, and the faculty members for their continuous guidance and support throughout the development of this project....
+The authors sincerely thank **Amrita Vishwa Vidyapeetham**, the Department of Artificial Intelligence, and the faculty members for their continuous guidance and support throughout the development of this project.
