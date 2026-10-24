@@ -1,3 +1,0 @@
-episode,scenario,outcome,mission_completed,duration_s,steps,min_obstacle_distance,mean_altitude_error,max_altitude_error,battery_consumed_percent,emergency_events,safe_landing_events,wind_mean
-1,normal,landed,True,16.59,1991,5.0,0.294,1.999,5.11,0,0,0.5
-2,normal,landed,True,16.59,1991,5.0,0.294,1.999,5.11,0,0,0.5
