@@ -73,29 +73,24 @@ flowchart TD
 
 ## Mathematical Formulation
 
-The planner evaluates each candidate path using the weighted cost function
+The planner evaluates each candidate path using the weighted cost function:
 
-\[
-J(P)=w_E E(P)+w_S S(P)+w_T T(P)+w_R R(P)+w_M M(P),
-\]
+$$J(P) = w_E E(P) + w_S S(P) + w_T T(P) + w_R R(P) + w_M M(P)$$
 
 where:
+- $P$: candidate path.
+- $E(P)$: energy-related cost.
+- $S(P)$: safety or obstacle-clearance cost.
+- $T(P)$: travel-time cost.
+- $R(P)$: tracking-deviation cost.
+- $M(P)$: mission-related cost.
+- $w_E, w_S, w_T, w_R, w_M$: weights assigned to the objectives.
 
-- \(P\): candidate path.
-- \(E(P)\): energy-related cost.
-- \(S(P)\): safety or obstacle-clearance cost.
-- \(T(P)\): travel-time cost.
-- \(R(P)\): tracking-deviation cost.
-- \(M(P)\): mission-related cost.
-- \(w_E,w_S,w_T,w_R,w_M\): weights assigned to the objectives.
-
-The selected path is the feasible candidate with the lowest value of \(J(P)\).
+The selected path is the feasible candidate with the lowest value of $J(P)$.
 
 The current MATLAB model uses the following minimum-clearance expression:
 
-\[
-d_{\mathrm{required}}=r_{\mathrm{UAV}}+b_{\mathrm{safety}}=2.5+1.0=3.5\ \mathrm{m}.
-\]
+$$d_{\mathrm{required}} = r_{\mathrm{UAV}} + b_{\mathrm{safety}} = 2.5 + 1.0 = 3.5\text{ m}$$
 
 ## Tools and Technologies
 
