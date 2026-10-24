@@ -1473,54 +1473,83 @@ Zero recorded collisions in a scenario means no collisions were recorded during 
 
 ```text
 drone_simulation_project/
+│
 ├── main.py
-├── legacy_modes.py
 ├── evaluate.py
+├── test_env.py
 ├── scenarios.py
-├── README.md
+├── legacy_modes.py
+├── train.py
+│
 ├── requirements.txt
-│
-├── state/
-│   └── flight_state.py
-│
-├── decision/
-│   └── acmfds.py
+├── requirements-rl.txt
 │
 ├── controllers/
+│   ├── __init__.py
 │   └── actuation.py
 │
+├── decision/
+│   ├── __init__.py
+│   └── acmfds.py
+│
 ├── simulation/
+│   ├── __init__.py
 │   ├── acmfds_mission.py
-│   ├── mission.py
-│   ├── pybullet_sim.py
-│   ├── drone.py
-│   ├── obstacles.py
 │   ├── battery.py
+│   ├── drone.py
+│   ├── mission.py
+│   ├── obstacles.py
+│   ├── pybullet_sim.py
 │   └── wind.py
 │
+├── state/
+│   ├── __init__.py
+│   └── flight_state.py
+│
 ├── telemetry/
+│   ├── __init__.py
 │   ├── gps.py
 │   └── logger.py
 │
-├── dashboard/
-│   ├── server.py
-│   └── static/
-│       ├── index.html
-│       ├── app.js
-│       └── style.css
-│
 ├── trajectory/
+│   ├── __init__.py
 │   └── interpolation.py
 │
-├── results/
-│   └── acmfds_log_<scenario>_<episode>.csv
+├── dashboard/
+│   ├── __init__.py
+│   ├── server.py
+│   └── static/
+│       ├── app.js
+│       ├── index.html
+│       └── style.css
 │
-└── test_env.py
+├── envs/
+│   ├── __init__.py
+│   └── drone_env.py
+│
+└── models/
+    ├── ppo_drone/
+    │   ├── _stable_baselines3_version
+    │   ├── data/
+    │   ├── policy.optimizer.pth
+    │   ├── policy.pth
+    │   ├── pytorch_variables.pth
+    │   └── system_info.txt
+    │
+    ├── sac_drone/
+    │   ├── _stable_baselines3_version
+    │   ├── actor.optimizer.pth
+    │   ├── critic.optimizer.pth
+    │   ├── data/
+    │   ├── ent_coef_optimizer.pth
+    │   ├── policy.pth
+    │   ├── pytorch_variables.pth
+    │   └── system_info.txt
+    │
+    └── obstacle_avoidance_model.pkl
 ```
 
-The exact files present may vary by repository revision. Verify the folder structure against the project before submission.
 
----
 
 
 ## 19. References
