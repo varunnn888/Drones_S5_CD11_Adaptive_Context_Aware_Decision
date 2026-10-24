@@ -76,7 +76,7 @@ where:
 Among the feasible candidates, the planner selects the path with the lowest objective value:
 
 $$
-P^* = \underset{P \in \mathcal{P}_{\mathrm{feasible}}}{\arg\min}\; J(P).
+P^* = \underset{P \in \mathcal{P}_{\mathrm{feasible}}}{\arg\min}\ J(P).
 $$
 
 The MATLAB planner uses an obstacle-clearance requirement based on the UAV radius and an additional safety buffer:
