@@ -61,20 +61,3 @@ Start with the simulation directory that interests you. Read its local documenta
 The individual simulation folders are the authoritative sources for their own dependencies, implementation details, and execution instructions.
 
 ---
-## 3. Conceptual System Architecture
-
-The following diagram describes the general decision-making workflow explored by ACMFDS. It is a conceptual overview, not a claim that every implementation follows precisely the same pipeline.
-
-```mermaid
-flowchart TD
-    A["Mission Configuration"] --> B["Environment and Vehicle State"]
-    B --> C["Context Assessment"]
-    C --> D["Route Planning"]
-    D --> E["Obstacle and Feasibility Checks"]
-    E --> F["Route Evaluation and Decision"]
-    F --> G["Selected Route or Waypoint"]
-    G --> H["Motion and Simulation Update"]
-    H --> I["Updated Position, Time and Energy"]
-    I --> C
-    E -->| "Infeasible route" | J["Replanning or Recovery Evaluation"]
-    J --> D
