@@ -1522,7 +1522,131 @@ The exact files present may vary by repository revision. Verify the folder struc
 
 ---
 
-## 19. Project Contribution
+
+## 19. References
+
+1. **Coumans, E., and Bai, Y. (2023).** [*PyBullet Quickstart Guide*](https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit?tab=t.0#heading=h.2ye70wns7io3).  
+   **Relevance:** PyBullet physics simulation and environment setup.
+
+2. **Luis, C., and Le Ny, J. (2016).** [*Design of a Trajectory Tracking Controller for a Nanoquadcopter*](https://arxiv.org/pdf/1608.05786.pdf).  
+   **Relevance:** Background for quadcopter trajectory tracking and flight control.
+
+3. **Landry, B. (2014).** [*Planning and Control for Quadrotor Flight through Cluttered Environments*](http://groups.csail.mit.edu/robotics-center/public_papers/Landry15).  
+   **Relevance:** Relevant to autonomous navigation and obstacle-aware flight decisions.
+
+4. **Forster, J. (2015).** [*System Identification of the Crazyflie 2.0 Nano Quadrocopter*](https://www.research-collection.ethz.ch/handle/20.500.11850/214143).  
+   **Relevance:** Background on quadrotor dynamics and modeling.
+
+5. **Liu, C. K., and Negrut, D. (2020).** [*The Role of Physics-Based Simulators in Robotics*](https://www.annualreviews.org/doi/pdf/10.1146/annurev-control-072220-093055).  
+   **Relevance:** Explains the role of physics-based simulation in robotics research and evaluation.
+
+
+## 20. How to Run
+
+### 1. Prerequisites
+
+- Python 3.10 or newer
+- pip
+- Git (optional, for cloning the repository)
+
+### 2. Clone the Repository
+
+```bash
+git clone <YOUR_GITHUB_REPOSITORY_URL>
+cd <YOUR_PROJECT_FOLDER>
+```
+
+If you have already downloaded the project, open a terminal in the project directory instead.
+
+### 3. Create a Virtual Environment
+
+**Windows (Command Prompt):**
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+**Linux/macOS:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 4. Install Dependencies
+
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 5. Run the Drone Simulation
+
+Start the main ACMFDS mission:
+
+```bash
+python main.py
+```
+
+The simulation uses PyBullet for physics, ACMFDS for context-aware flight decisions, and the SMC actuation layer for control. Follow the terminal output and the simulation window, if enabled.
+
+### 6. Run the Tests
+
+To verify the project components:
+
+```bash
+python test_env.py
+```
+
+The test suite passed all 55 tests during project verification. Results may vary depending on the current code version and environment.
+
+### 7. Evaluate a Flight Scenario
+
+Run one normal-flight episode:
+
+```bash
+python evaluate.py --scenario normal --episodes 1 --seed 42
+```
+
+The evaluator reports mission completion, collisions, minimum obstacle distance, altitude error, battery consumption, and emergency events. Evaluation results are written to the `results/` directory.
+
+## Project Architecture
+
+- **ACMFDS decision layer:** Selects flight actions based on the current mission and flight conditions.
+- **SMC actuation layer:** Applies the project's Sliding Mode Control logic.
+- **PyBullet simulation:** Provides the simulated physics environment.
+- **Telemetry and dashboard components:** Support monitoring and visualization where configured.
+- **Evaluation and testing:** Measure scenario performance and check software components.
+
+## References
+
+1. Coumans, E., and Bai, Y. *PyBullet Quickstart Guide*. Bullet Physics.  
+   [PyBullet Quickstart Guide](https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html)
+
+2. NumPy Developers. *NumPy Documentation*.  
+   [https://numpy.org/doc/stable/](https://numpy.org/doc/stable/)
+
+3. FastAPI. *FastAPI Documentation*.  
+   [https://fastapi.tiangolo.com/](https://fastapi.tiangolo.com/)
+
+4. Uvicorn. *Uvicorn Documentation*.  
+   [https://www.uvicorn.org/](https://www.uvicorn.org/)
+
+5. Utkin, V. I. (1977). "Variable Structure Systems with Sliding Modes." *IEEE Transactions on Automatic Control*, 22(2), 212–222.  
+   [https://doi.org/10.1109/TAC.1977.1101446](https://doi.org/10.1109/TAC.1977.1101446)
+
+6. Python Software Foundation. *Python Documentation*.  
+   [https://docs.python.org/3/](https://docs.python.org/3/)
+
+## Notes
+
+- This project uses a custom PyBullet simulation with ACMFDS and SMC. The main mission does not currently require a Gymnasium environment or `gym-pybullet-drones`.
+- The ACMFDS decision logic is part of this project's implementation. Cite original sources for the underlying technologies and control methods, and describe ACMFDS as your project's design.
+- Simulation results are obtained in a software simulation and do not, by themselves, establish real-world flight safety.
+
+
+## 21. Project Contribution
 
 The project's central contribution is an **explainable, multi-objective flight-decision system operating over a physics-based quadcopter simulation**.
 
